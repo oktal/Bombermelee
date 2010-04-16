@@ -16,7 +16,7 @@ private:
     void OnInit();
     void OnUpdate();
     void drawWalls();
-    bool canMove();
+    bool canMove(Direction movement, const float &ElapsedTime);
     sf::Image wall;
     sf::Image box;
     sf::Sprite m_wall;

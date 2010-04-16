@@ -20,7 +20,6 @@ This file is part of Bombermelee.
     along with Bombermelee.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-static const int SPEED = 300;
 
 CGameBoard::CGameBoard(QWidget *parent, const QPoint &position, const QSize &size) :
         QSFMLCanvas(parent, position, size)
@@ -45,32 +44,40 @@ void CGameBoard::OnUpdate()
     float ElapsedTime = GetFrameTime();
     if (GetInput().IsKeyDown(sf::Key::Right))
     {
-        if (canMove())
+        m_player.setDirection(Right);
+        if (canMove(Right, ElapsedTime))
         {
-            m_player.move(m_player.Right, ElapsedTime);
+            m_player.move(Right, ElapsedTime);
         }
+        m_player.anim(ElapsedTime);
 
     }
     else if (GetInput().IsKeyDown(sf::Key::Left))
     {
-        if (canMove())
+        m_player.setDirection(Left);
+        if (canMove(Left, ElapsedTime))
         {
-            m_player.move(m_player.Left, ElapsedTime);
+            m_player.move(Left, ElapsedTime);
         }
+        m_player.anim(ElapsedTime);
     }
     else if (GetInput().IsKeyDown(sf::Key::Down))
     {
-        if (canMove())
+        m_player.setDirection(Down);
+        if (canMove(Down, ElapsedTime))
         {
-            m_player.move(m_player.Down, ElapsedTime);
+            m_player.move(Down, ElapsedTime);
         }
+        m_player.anim(ElapsedTime);
     }
     else if (GetInput().IsKeyDown(sf::Key::Up))
     {
-        if (canMove())
+        m_player.setDirection(Up);
+        if (canMove(Up, ElapsedTime))
         {
-            m_player.move(m_player.Up, ElapsedTime);
+            m_player.move(Up, ElapsedTime);
         }
+        m_player.anim(ElapsedTime);
     }
     else
     {
@@ -95,15 +102,67 @@ void CGameBoard::drawWalls()
    }
 }
 
-bool CGameBoard::canMove()
+bool CGameBoard::canMove(Direction movement, const float &ElapsedTime)
 {
-    const sf::Vector2f &currentPosition = m_player.GetPosition();
-    unsigned x = (static_cast<int>(currentPosition.x) + 0) / 34;
-    unsigned y = (static_cast<int>(currentPosition.y) + m_player.GetImage()->GetHeight()) / 34;
-    QString p = QString("%1 %2").arg(x).arg(y);
-    sf::String s(p.toStdString());
-    s.SetSize(20.f);
-    s.SetPosition(520, 10);
-    Draw(s);
-    return true;
+    int pos_x1, pos_y1, pos_x2, pos_y2;
+    switch (movement)
+    {
+    case Left:
+        pos_x1 = m_player.GetPosition().x;
+        pos_y1 = m_player.GetPosition().y;
+        pos_x2 = pos_x1;
+        pos_y2 = pos_y1 + m_player.GetSubRect().GetHeight();
+        pos_x1 -= (Speed * ElapsedTime);
+        pos_x2 -= (Speed * ElapsedTime);
+        break;
+    case Right:
+        pos_x1 = m_player.GetPosition().x + m_player.GetSubRect().GetWidth();
+        pos_y1 = m_player.GetPosition().y;
+        pos_x2 = pos_x1;
+        pos_y2 = pos_y1 + m_player.GetSubRect().GetHeight();
+        pos_x1 += (Speed * ElapsedTime);
+        pos_x2 += (Speed * ElapsedTime);
+        break;
+    case Up:
+        pos_x1 = m_player.GetPosition().x;
+        pos_y1 = m_player.GetPosition().y;
+        pos_x2 = pos_x1 + m_player.GetSubRect().GetWidth();
+        pos_y2 = pos_y1;
+        pos_y1 -= (Speed * ElapsedTime);
+        pos_y2 -= (Speed * ElapsedTime);
+        break;
+    case Down:
+        pos_x1 = m_player.GetPosition().x;
+        pos_y1 = m_player.GetPosition().y + m_player.GetSubRect().GetHeight();
+        pos_x2 = pos_x1 + m_player.GetSubRect().GetWidth();
+        pos_y2 = pos_y1;
+        pos_y1 += (Speed * ElapsedTime);
+        pos_y2 += (Speed * ElapsedTime);
+        break;
+    }
+    if ((movement == Left && pos_x1 < 0) ||
+        (movement == Right && pos_x1 > 510) ||
+        (movement == Up && pos_y1 < 0) ||
+        (movement == Down && pos_y1 > 510))
+    {
+        return false;
+    }
+    unsigned x1 = pos_x1 / 34;
+    unsigned y1 = pos_y1 / 34;
+    unsigned x2 = pos_x2 / 34;
+    unsigned y2 = pos_y2 / 34;
+    QString s = QString("%1 %2").arg(x1).arg(y1);
+    sf::String str(s.toStdString());
+    str.SetPosition(520, 10);
+    str.SetSize(20.f);
+    Draw(str);
+    if (m_map.getBlock(x1, y1) == Wall ||
+        m_map.getBlock(x2, y2) == Wall)
+    {
+        return false;
+    }
+    else
+    {
+        return true;
+    }
 }

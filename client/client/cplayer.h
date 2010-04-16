@@ -5,16 +5,19 @@
 #include "Animated.h"
 #include "cmap.h"
 
+enum Direction
+{
+    Left, Right, Down, Up
+};
+static const int Speed = 100;
+
 class CPlayer : public Animated
 {
 public:
     CPlayer(std::string color = "");
-    enum Movement
-    {
-        Left, Right, Down, Up
-    };
-    void move(Movement move, const float &ElapsedTime);
-    void explode(const float &ElapsedTime);
+    void move(Direction move, const float &ElapsedTime);
+    void setDirection(Direction move);
+    void explode();
 
 private:
     std::string m_color;

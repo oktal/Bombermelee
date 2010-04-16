@@ -1,12 +1,10 @@
 #include <QtGui>
 #include "cplayer.h"
 
-static const int Speed = 100;
-
 CPlayer::CPlayer(std::string color) :
         m_color(color)
 {
-    if (!m_img_player.LoadFromFile("../perso2.png"))
+    if (!m_img_player.LoadFromFile("../perso.png"))
     {
         return;
     }
@@ -36,36 +34,52 @@ CPlayer::CPlayer(std::string color) :
     SetFrameTime(0.2f);
 }
 
-void CPlayer::move(Movement move, const float &ElapsedTime)
+void CPlayer::setDirection(Direction move)
 {
     switch (move)
     {
     case Right:
-            if (GetAnim() != &m_player_right)
-            {
-                SetAnim(&m_player_right);
-            }
+        if (GetAnim() != &m_player_right)
+        {
+            SetAnim(&m_player_right);
+        }
+        break;
+    case Left:
+        if (GetAnim() != &m_player_left)
+        {
+            SetAnim(&m_player_left);
+        }
+        break;
+    case Up:
+        if (GetAnim() != &m_player_up)
+        {
+            SetAnim(&m_player_up);
+        }
+        break;
+    case Down:
+        if (GetAnim() != &m_player_down)
+        {
+            SetAnim(&m_player_down);
+        }
+        break;
+    }
+}
+
+void CPlayer::move(Direction move, const float &ElapsedTime)
+{
+    setDirection(move);
+    switch (move)
+    {
+    case Right:
             Move(Speed * ElapsedTime, 0);
             break;
     case Left:
-            if (GetAnim() != &m_player_left)
-            {
-                SetAnim(&m_player_left);
-            }
             Move(-Speed * ElapsedTime, 0);
             break;
     case Up:
-            if (GetAnim() != &m_player_up)
-            {
-                SetAnim(&m_player_up);
-            }
             Move(0, -Speed * ElapsedTime);
             break;
     case Down:
-            if (GetAnim() != &m_player_down)
-            {
-                SetAnim(&m_player_down);
-            }
             Move(0, Speed * ElapsedTime);
             break;
     }
@@ -73,15 +87,13 @@ void CPlayer::move(Movement move, const float &ElapsedTime)
     {
         Play();
     }
-    anim(ElapsedTime);
 }
 
-void CPlayer::explode(const float &ElapsedTime)
+void CPlayer::explode()
 {
     if (GetAnim() != &m_player_explode)
     {
         SetAnim(&m_player_explode);
     }
-    anim(ElapsedTime);
 }
 
