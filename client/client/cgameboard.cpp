@@ -26,6 +26,10 @@ CGameBoard::CGameBoard(QWidget *parent, const QPoint &position, const QSize &siz
 {
 }
 
+/**
+  Function called when SFML Canvas is shown
+  We load sprites
+*/
 void CGameBoard::OnInit()
 {
     if (!wall.LoadFromFile("../mur.png"))
@@ -37,9 +41,12 @@ void CGameBoard::OnInit()
     m_wall.SetImage(wall);
 }
 
+/**
+  Function called to refresh the view on canvas
+*/
 void CGameBoard::OnUpdate()
 {
-    Clear(sf::Color(195, 195, 195));
+    Clear(sf::Color(195, 195, 195)); /* Grey */
     drawWalls();
     float ElapsedTime = GetFrameTime();
     if (GetInput().IsKeyDown(sf::Key::Right))
@@ -90,6 +97,9 @@ void CGameBoard::OnUpdate()
     Draw(m_player);
 }
 
+/**
+  Draw all the walls (indestructible blocks)
+*/
 void CGameBoard::drawWalls()
 {
    for (unsigned i = 1; i < 15; i += 2)
@@ -102,6 +112,12 @@ void CGameBoard::drawWalls()
    }
 }
 
+/**
+  Check if the player can move
+  @param movement Direction to go
+  @param ElapsedTime FrameTime
+  @return true if the player can move, false if not
+*/
 bool CGameBoard::canMove(Direction movement, const float &ElapsedTime)
 {
     int pos_x1, pos_y1, pos_x2, pos_y2;
@@ -147,6 +163,9 @@ bool CGameBoard::canMove(Direction movement, const float &ElapsedTime)
     {
         return false;
     }
+    /*
+      DEBUG
+    */
     unsigned x1 = pos_x1 / 34;
     unsigned y1 = pos_y1 / 34;
     unsigned x2 = pos_x2 / 34;
@@ -156,11 +175,16 @@ bool CGameBoard::canMove(Direction movement, const float &ElapsedTime)
     str.SetPosition(520, 10);
     str.SetSize(20.f);
     Draw(str);
+    /*
+      END DEBUG
+    */
+    /* If we want to move on a wall, just return false */
     if (m_map.getBlock(x1, y1) == Wall ||
         m_map.getBlock(x2, y2) == Wall)
     {
         return false;
     }
+    /* We can move */
     else
     {
         return true;

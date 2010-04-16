@@ -15,6 +15,9 @@ enum BlockType
     None
 };
 
+/**
+  @class CMap represents the whole map
+*/
 class CMap
 {
 public:

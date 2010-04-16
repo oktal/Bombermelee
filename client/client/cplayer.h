@@ -9,7 +9,7 @@ enum Direction
 {
     Left, Right, Down, Up
 };
-static const int Speed = 100;
+static const int Speed = 100; /* Speed of the bomberman */
 
 class CPlayer : public Animated
 {
