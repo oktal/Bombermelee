@@ -115,13 +115,15 @@ void CServer::onConnect()
 void CServer::onDisconnect()
 {
     QTcpSocket *socket = qobject_cast<QTcpSocket *>(sender());
-    QString nick = "";
+    QString nick = "", color = "";
     for (unsigned i = 0; i < m_clientsList.size(); ++i)
     {
         if (m_clientsList[i]->getSocket() == socket)
         {
             nick = m_clientsList[i]->getNick();
+            color = m_clientsList[i]->getColor();
             appendToConsole(tr("<strong>%1</strong> has left").arg(nick));
+            m_colors += color;
             m_clientsList.removeAt(i);
             break;
         }

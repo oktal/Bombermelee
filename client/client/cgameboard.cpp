@@ -32,6 +32,7 @@ static inline char const *_m(const std::string &message)
 CGameBoard::CGameBoard(QWidget *parent, const QPoint &position, const QSize &size, unsigned int FrameTime) :
         QSFMLCanvas(parent, position, size, FrameTime)
 {
+    m_player.Play();
 }
 
 /**
@@ -56,11 +57,11 @@ void CGameBoard::OnUpdate()
 {
     Clear(sf::Color(195, 195, 195)); /* Grey */
     sf::Shape rightBorder = sf::Shape::Rectangle(510, 0, 630, 510, sf::Color(127, 127, 127));
+    float ElapsedTime = GetFrameTime();
     Draw(rightBorder);
     drawWalls();
     drawOtherPlayers();
     drawFPS();
-    float ElapsedTime = GetFrameTime();
     if (GetInput().IsKeyDown(sf::Key::Right))
     {
         m_player.setDirection(Right);
@@ -134,12 +135,9 @@ void CGameBoard::drawWalls()
 
 void CGameBoard::drawOtherPlayers()
 {
-    QHash<QString, CPlayer *>::const_iterator it = m_otherPlayers.constBegin();
-    while (it != m_otherPlayers.constEnd())
+    for (unsigned i = 0; i < m_otherPlayers.size(); ++i)
     {
-        CPlayer *player = it.value();
-        Draw(*player);
-        ++it;
+        Draw(*m_otherPlayers[i]);
     }
 }
 
@@ -251,32 +249,55 @@ void CGameBoard::newPlayer(const std::string &nick, const std::string &color)
 {
     CPlayer *player = new CPlayer(nick, color);
     player->setCorrectPosition();
-    m_otherPlayers[QString(nick.c_str())] = player;
+    player->Play();
+    m_otherPlayers.append(player);
 }
 
 void CGameBoard::playerLeft(const std::string &nick)
 {
-    m_otherPlayers.remove(QString(nick.c_str()));
+    for (unsigned i = 0; i < m_otherPlayers.size(); ++i)
+    {
+        if (m_otherPlayers[i]->getNick() == nick)
+        {
+            m_otherPlayers.removeAt(i);
+            break;
+        }
+    }
 }
 
 void CGameBoard::playerMove(const std::string &nick, const std::string &move, const float x, const float y)
 {
+    CPlayer *player = getPlayerFromNick(nick);
     if (move == "LEFT")
     {
-        m_otherPlayers[QString(nick.c_str())]->setDirection(Left);
+        player->setDirection(Left);
     }
     else if (move == "RIGHT")
     {
-        m_otherPlayers[QString(nick.c_str())]->setDirection(Right);
+        player->setDirection(Right);
     }
     else if (move == "UP")
     {
-        m_otherPlayers[QString(nick.c_str())]->setDirection(Up);
+        player->setDirection(Up);
     }
     else if (move == "DOWN")
     {
-        m_otherPlayers[QString(nick.c_str())]->setDirection(Down);
+        player->setDirection(Down);
     }
-    m_otherPlayers[QString(nick.c_str())]->SetPosition(x, y);
+    player->SetPosition(x, y);
+    player->anim(GetFrameTime());
 }
 
+CPlayer *CGameBoard::getPlayerFromNick(const std::string &nick)
+{
+    CPlayer *player = NULL;
+    for (unsigned i = 0; i < m_otherPlayers.size(); ++i)
+    {
+        if (m_otherPlayers[i]->getNick() == nick)
+        {
+            player = m_otherPlayers[i];
+            break;
+        }
+    }
+    return player;
+}

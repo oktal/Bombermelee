@@ -27,12 +27,13 @@ private:
     void drawOtherPlayers();
     void drawFPS();
     bool canMove(Direction movement, const float &ElapsedTime);
+    CPlayer *getPlayerFromNick(const std::string &nick);
     sf::Image wall;
     sf::Image box;
     sf::Sprite m_wall;
     sf::Sprite m_box;
     CPlayer m_player;
-    QHash<QString, CPlayer *> m_otherPlayers;
+    QList<CPlayer *> m_otherPlayers;
     QString m_nick;
     QTcpSocket *m_socket;
     CMap m_map;

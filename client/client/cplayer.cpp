@@ -117,10 +117,6 @@ void CPlayer::move(Direction move, const float &ElapsedTime)
             Move(0, Speed * ElapsedTime);
             break;
     }
-    if (IsPaused())
-    {
-        Play();
-    }
 }
 
 void CPlayer::explode()
