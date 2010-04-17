@@ -20,9 +20,17 @@ This file is part of Bombermelee.
     along with Bombermelee.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+/**
+  * function _m transforms a message into a valid message request (ending by \r\n)
+  * @return message request
+*/
+static inline char const *_m(const std::string &message)
+{
+    return std::string(message + "\r\n").c_str();
+}
 
-CGameBoard::CGameBoard(QWidget *parent, const QPoint &position, const QSize &size) :
-        QSFMLCanvas(parent, position, size)
+CGameBoard::CGameBoard(QWidget *parent, const QPoint &position, const QSize &size, unsigned int FrameTime) :
+        QSFMLCanvas(parent, position, size, FrameTime)
 {
 }
 
@@ -47,7 +55,10 @@ void CGameBoard::OnInit()
 void CGameBoard::OnUpdate()
 {
     Clear(sf::Color(195, 195, 195)); /* Grey */
+    sf::Shape rightBorder = sf::Shape::Rectangle(510, 0, 630, 510, sf::Color(127, 127, 127));
+    Draw(rightBorder);
     drawWalls();
+    drawOtherPlayers();
     float ElapsedTime = GetFrameTime();
     if (GetInput().IsKeyDown(sf::Key::Right))
     {
@@ -55,6 +66,8 @@ void CGameBoard::OnUpdate()
         if (canMove(Right, ElapsedTime))
         {
             m_player.move(Right, ElapsedTime);
+            QString pos = QString("%1 %2").arg(m_player.GetPosition().x).arg(m_player.GetPosition().y);
+            m_socket->write(_m("MOVE " + m_player.getNick() + " RIGHT " + pos.toStdString()));
         }
         m_player.anim(ElapsedTime);
 
@@ -65,6 +78,8 @@ void CGameBoard::OnUpdate()
         if (canMove(Left, ElapsedTime))
         {
             m_player.move(Left, ElapsedTime);
+            QString pos = QString("%1 %2").arg(m_player.GetPosition().x).arg(m_player.GetPosition().y);
+            m_socket->write(_m("MOVE " + m_player.getNick() + " LEFT " + pos.toStdString()));
         }
         m_player.anim(ElapsedTime);
     }
@@ -74,6 +89,8 @@ void CGameBoard::OnUpdate()
         if (canMove(Down, ElapsedTime))
         {
             m_player.move(Down, ElapsedTime);
+            QString pos = QString("%1 %2").arg(m_player.GetPosition().x).arg(m_player.GetPosition().y);
+            m_socket->write(_m("MOVE " + m_player.getNick() + " DOWN " + pos.toStdString()));
         }
         m_player.anim(ElapsedTime);
     }
@@ -83,6 +100,8 @@ void CGameBoard::OnUpdate()
         if (canMove(Up, ElapsedTime))
         {
             m_player.move(Up, ElapsedTime);
+            QString pos = QString("%1 %2").arg(m_player.GetPosition().x).arg(m_player.GetPosition().y);
+            m_socket->write(_m("MOVE " + m_player.getNick() + " UP " + pos.toStdString()));
         }
         m_player.anim(ElapsedTime);
     }
@@ -110,6 +129,17 @@ void CGameBoard::drawWalls()
            Draw(m_wall);
        }
    }
+}
+
+void CGameBoard::drawOtherPlayers()
+{
+    QHash<QString, CPlayer *>::const_iterator it = m_otherPlayers.constBegin();
+    while (it != m_otherPlayers.constEnd())
+    {
+        CPlayer *player = it.value();
+        Draw(*player);
+        ++it;
+    }
 }
 
 /**
@@ -190,3 +220,47 @@ bool CGameBoard::canMove(Direction movement, const float &ElapsedTime)
         return true;
     }
 }
+
+void CGameBoard::setPlayerColor(std::string color)
+{
+    m_player.setColor(color);
+    m_player.setCorrectPosition();
+}
+
+void CGameBoard::setSocket(QTcpSocket *socket)
+{
+    m_socket = socket;
+}
+
+void CGameBoard::setNick(const std::string &nick){
+    m_player.setNick(nick);
+}
+
+void CGameBoard::newPlayer(const std::string &nick, const std::string &color)
+{
+    CPlayer *player = new CPlayer(nick, color);
+    player->setCorrectPosition();
+    m_otherPlayers[QString(nick.c_str())] = player;
+}
+
+void CGameBoard::playerMove(const std::string &nick, const std::string &move, const float x, const float y)
+{
+    if (move == "LEFT")
+    {
+        m_otherPlayers[QString(nick.c_str())]->setDirection(Left);
+    }
+    else if (move == "RIGHT")
+    {
+        m_otherPlayers[QString(nick.c_str())]->setDirection(Right);
+    }
+    else if (move == "UP")
+    {
+        m_otherPlayers[QString(nick.c_str())]->setDirection(Up);
+    }
+    else if (move == "DOWN")
+    {
+        m_otherPlayers[QString(nick.c_str())]->setDirection(Down);
+    }
+    m_otherPlayers[QString(nick.c_str())]->SetPosition(x, y);
+}
+

@@ -1,9 +1,10 @@
 #include "cclient.h"
-#include "cgameboard.h"
 #include "cconnect.h"
 #include <QtGui>
 #include <QTcpSocket>
 #include <QEvent>
+#include <cctype>
+#include <cstdlib>
 
 /*
 This file is part of Bombermelee.
@@ -34,11 +35,21 @@ static inline char const *_m(const std::string &message)
     return std::string(message + "\r\n").c_str();
 }
 
+static std::string strToLower(const std::string &str)
+{
+    std::string lower = "";
+    for (unsigned i = 0; i < str.size(); ++i)
+    {
+        lower[i] = tolower(str[i]);
+    }
+    return lower;
+}
 
 CClient::CClient(QWidget *parent, const QString &address, const QString &nick) :
         m_address(address), m_nick(nick)
 {
-    CGameBoard *gameBoard = new CGameBoard(this, QPoint(10, 10), QSize(630, 510));
+    m_gameBoard = new CGameBoard(this, QPoint(10, 10), QSize(630, 510), 0.4);
+    m_gameBoard->setNick(nick.toStdString());
 
     m_chatBox = new QTextEdit(this);
     m_chatBox->setReadOnly(true);
@@ -61,6 +72,7 @@ CClient::CClient(QWidget *parent, const QString &address, const QString &nick) :
     m_lst_users->resize(QSize(90, 100));
 
     m_socket = new QTcpSocket();
+    m_gameBoard->setSocket(m_socket);
 
     QObject::connect(m_btn_send, SIGNAL(clicked()), this, SLOT(sendMessage()));
 
@@ -155,6 +167,10 @@ void CClient::readProtocolHeader()
     {
         messageType = Say;
     }
+    else if (l[0] == "MOVE")
+    {
+        messageType = Move;
+    }
     else if (l[0] == "MAP")
     {
         messageType = Map;
@@ -187,16 +203,18 @@ void CClient::processData()
          break;
     case Ok:
         appendToChatBox(tr("<font color='blue'><em>You are connected</em></font>"));
+        appendToChatBox(tr("<font color='blue'><em>You have been assigned color "
+                           "<strong>%2</strong></em></font>").arg(l[1]));
+        m_gameBoard->setPlayerColor(l[1].toStdString());
         setWindowTitle(m_nick + " connected on " + m_address);
         m_socket->write(_m("USERS"));
         break;
     case Join:
-        if (l[1] == m_nick)
-        {
-            return;
-        }
-        appendToChatBox(tr("<font color='blue'><em>%1 has joined the game</em></font>").arg(l[1]));
+        appendToChatBox(tr("<font color='blue'><em>%1 has joined the game an "
+                           "has been assigned color "
+                           "<strong>%2</strong></em></font>").arg(l[1]).arg(l[2]));
         appendToUsersList(l[1]);
+        m_gameBoard->newPlayer(l[1].toStdString(), l[2].toStdString());
         break;
     case Part:
         appendToChatBox(tr("<font color='blue'><em>%1 has left the game</em></font>").arg(l[1]));
@@ -213,7 +231,12 @@ void CClient::processData()
     case Users:
         for (int i = 1; i < l.length(); ++i)
         {
-            appendToUsersList(l[i]);
+            QStringList c = l[i].split(":");
+            appendToUsersList(c[0]);
+            if (c[0] != m_nick)
+            {
+                m_gameBoard->newPlayer(c[0].toStdString(), c[1].toStdString());
+            }
         }
         break;
     case Say:
@@ -224,6 +247,13 @@ void CClient::processData()
             QString message = l.join(" ");
             QString time = QTime::currentTime().toString();
             appendToChatBox(tr("<font color='blue'>[%1] %2 : %3</font>").arg(time).arg(nick).arg(message));
+        }
+        break;
+    case Move:
+        {
+            float x = strtod(l[3].toStdString().c_str(), NULL);
+            float y = strtod(l[4].toStdString().c_str(), NULL);
+            m_gameBoard->playerMove(l[1].toStdString(), l[2].toStdString(), x, y);
         }
         break;
     case Map:
@@ -248,6 +278,10 @@ void CClient::appendToUsersList(const QString &text)
 
 void CClient::sendMessage()
 {
+    if (m_message->text().isEmpty())
+    {
+        return;
+    }
     QString req = "SAY " + m_nick + " ";
     req += m_message->text();
     m_socket->write(_m(req.toStdString()));

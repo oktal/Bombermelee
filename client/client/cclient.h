@@ -4,6 +4,7 @@
 #include <QWidget>
 #include <QtGui>
 #include <QTcpSocket>
+#include "cgameboard.h"
 
 class CClient : public QWidget
 {
@@ -21,6 +22,7 @@ public:
         Part,
         Users,
         Say,
+        Move,
         Map,
         /* For future */
         Ping /* Ping Request */
@@ -31,6 +33,7 @@ private:
     QLineEdit *m_message;
     QPushButton *m_btn_send;
     QListWidget *m_lst_users;
+    CGameBoard *m_gameBoard;
 
     QTcpSocket *m_socket;
     QByteArray m_buffer;

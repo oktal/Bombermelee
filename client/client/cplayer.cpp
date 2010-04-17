@@ -18,14 +18,10 @@ This file is part of Bombermelee.
     along with Bombermelee.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-CPlayer::CPlayer(std::string color) :
-        m_color(color)
+CPlayer::CPlayer(const std::string &nick, const std::string &color) :
+        m_nick(nick)
 {
-    if (!m_img_player.LoadFromFile("../perso.png"))
-    {
-        return;
-    }
-    m_img_player.CreateMaskFromColor(sf::Color(255, 255, 255));
+    setColor(color);
 
     m_player_up.PushFrame(Frame(&m_img_player, sf::Rect<int>(2, 32, 18, 55)));
     m_player_up.PushFrame(Frame(&m_img_player, sf::Rect<int>(23, 32, 39, 55)));
@@ -82,6 +78,27 @@ void CPlayer::setDirection(Direction move)
     }
 }
 
+void CPlayer::setColor(const std::string &color)
+{
+    m_color = color;
+    std::string fileName = "../character-sheet-" + m_color + ".png";
+    if (!m_img_player.LoadFromFile(fileName))
+    {
+        return;
+    }
+    m_img_player.CreateMaskFromColor(sf::Color(255, 255, 255));
+}
+
+void CPlayer::setNick(const std::string &nick)
+{
+    m_nick = nick;
+}
+
+const std::string &CPlayer::getNick()
+{
+    return m_nick;
+}
+
 void CPlayer::move(Direction move, const float &ElapsedTime)
 {
     setDirection(move);
@@ -114,3 +131,26 @@ void CPlayer::explode()
     }
 }
 
+void CPlayer::setCorrectPosition()
+{
+    if (m_color == "white")
+    {
+        SetAnim(&m_player_right);
+        SetPosition(0, 0);
+    }
+    else if (m_color == "red")
+    {
+        SetAnim(&m_player_left);
+        SetPosition(510 - GetSubRect().GetWidth(), 0);
+    }
+    else if (m_color == "green")
+    {
+        SetAnim(&m_player_right);
+        SetPosition(0, 510 - GetSubRect().GetHeight());
+    }
+    else if (m_color == "blue")
+    {
+        SetAnim(&m_player_left);
+        SetPosition(510 - GetSubRect().GetWidth(), 510 - GetSubRect().GetHeight());
+    }
+}

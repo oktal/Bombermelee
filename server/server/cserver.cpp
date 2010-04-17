@@ -1,7 +1,9 @@
 #include "cserver.h"
+#include "cclient.h"
 #include "cmapgen.h"
 #include <QTcpSocket>
 #include <QNetworkInterface>
+#include <ctime>
 
 /*
 This file is part of Bombermelee.
@@ -24,15 +26,6 @@ static const quint16 DefaultPort = 45000;
 static const quint16 MaximumSlots = 4; /* 4 Players maximum */
 static const QChar SeparatorToken = ' ';
 
-/**
-  * function _m transforms a message into a valid message request (ending by \r\n)
-  * @return message request
-*/
-static inline char const *_m(const std::string &message)
-{
-    return std::string(message + "\r\n").c_str();
-}
-
 CServer::CServer(QWidget *parent) :
     QMainWindow(parent)
 {
@@ -42,17 +35,27 @@ CServer::CServer(QWidget *parent) :
     m_console->setReadOnly(true);
     m_btn_launch = new QPushButton("Launch Game");
     m_btn_pause = new QPushButton("Pause Game");
+    m_message = new QLineEdit();
+    m_btn_send = new QPushButton("send");
 
     QWidget *mainWidget = new QWidget();
     QGridLayout *mainLayout = new QGridLayout();
     mainLayout->addWidget(m_console, 0, 0, 1, 0);
     mainLayout->addWidget(m_btn_launch, 1, 0);
     mainLayout->addWidget(m_btn_pause, 1, 1);
+    /*mainLayout->addWidget(m_message, 2, 0);
+    mainLayout->addWidget(m_btn_send, 2, 1);*/
     mainWidget->setLayout(mainLayout);
 
     setCentralWidget(mainWidget);
     setWindowTitle("Bombermelee Dedicated Server");
     setFixedSize(600, 400);
+
+    m_colors += "white";
+    m_colors += "red";
+    m_colors += "green";
+    m_colors += "blue";
+    srand(time(NULL));
 
     startServer();
     QObject::connect(m_btn_launch, SIGNAL(clicked()), this, SLOT(sendMapToClients()));
@@ -112,19 +115,16 @@ void CServer::onConnect()
 void CServer::onDisconnect()
 {
     QTcpSocket *socket = qobject_cast<QTcpSocket *>(sender());
-    QHash<QString, QTcpSocket *>::const_iterator it = m_clientsList.constBegin();
     QString nick = "";
-    while (it != m_clientsList.constEnd())
+    for (unsigned i = 0; i < m_clientsList.size(); ++i)
     {
-        QTcpSocket *client = it.value();
-        if (client == socket)
+        if (m_clientsList[i]->getSocket() == socket)
         {
-            nick = it.key();
+            nick = m_clientsList[i]->getNick();
             appendToConsole(tr("<strong>%1</strong> has left").arg(nick));
-            m_clientsList.remove(nick);
+            m_clientsList.removeAt(i);
             break;
         }
-        ++it;
     }
     broadcast("PART " + nick, socket);
 
@@ -187,6 +187,10 @@ void CServer::readProtocolHeader()
     {
         messageType = Say;
     }
+    else if (l[0] == "MOVE")
+    {
+        messageType = Move;
+    }
     else
     {
         messageType = PlainDataText;
@@ -213,20 +217,24 @@ void CServer::processData(QTcpSocket *sender)
             send(sender, "BADNICK");
             return;
         }
-        send(sender, "OK");
-        appendToConsole(tr("<strong>%1</strong> has joined").arg(l[1]));
-        m_clientsList[l[1]] = sender;
-        broadcast("JOIN " + l[1], sender);
+        {
+            QString color = m_colors[rand() % m_colors.size()];
+            CClient *newClient = new CClient(sender, l[1], color);
+            m_colors.removeOne(color);
+            send(sender, "OK " + color);
+            appendToConsole(tr("<strong>%1</strong> has joined").arg(l[1]));
+            m_clientsList.append(newClient);
+            broadcast("JOIN " + l[1] + " " + color, sender);
+        }
         break;
     case Users:
         {
              /* Send the whole users list */
              QString response = "USERS ";
-             QList<QString> nicks = m_clientsList.keys();
-             for (int i = 0; i < nicks.count(); ++i)
+             for (unsigned i = 0; i < m_clientsList.size(); ++i)
              {
-                 response += nicks[i];
-                 if (i < nicks.count() - 1)
+                 response += m_clientsList[i]->getNick() + ":" + m_clientsList[i]->getColor();
+                 if (i < m_clientsList.count() - 1)
                  {
                     response += " ";
                 }
@@ -238,6 +246,9 @@ void CServer::processData(QTcpSocket *sender)
         /* Broadcast the message to all over clients */
         broadcast(QString(m_buffer.data()), sender);
         break;
+    case Move:
+        broadcast(QString(m_buffer.data()), sender);
+        break;
     case PlainDataText:
     case Pong:
     case Undefined:
@@ -246,19 +257,36 @@ void CServer::processData(QTcpSocket *sender)
     }
 }
 
+CClient *CServer::getClientFromNick(const QString &nick)
+{
+    CClient *ret = NULL;
+    QList<CClient *>::const_iterator it = m_clientsList.constBegin();
+    while (it != m_clientsList.constEnd())
+    {
+        CClient *client = *it;
+        if (client->getNick() == nick)
+        {
+            ret = *it;
+            break;
+        }
+        ++it;
+    }
+    return ret;
+}
+
 /**
   * Broadcast a message to all connected clients
 */
 
 void CServer::broadcast(const QString &message, QTcpSocket *except)
 {
-    QHash<QString, QTcpSocket *>::const_iterator it = m_clientsList.constBegin();
+    QList<CClient *>::const_iterator it = m_clientsList.constBegin();
     while (it != m_clientsList.constEnd())
     {
-        QTcpSocket *client = it.value();
-        if (client != except)
+        CClient *client = *it;
+        if (client->getSocket() != except)
         {
-            send(client, message);
+            client->send(message.toStdString());
         }
         ++it;
     }
@@ -275,7 +303,7 @@ void CServer::sendMapToClients()
 
 bool CServer::nickAlreadyInUse(const QString &nick)
 {
-    return m_clientsList.contains(nick);
+    return getClientFromNick(nick) != NULL;
 }
 
 void CServer::appendToConsole(const QString &text)

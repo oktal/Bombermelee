@@ -7,7 +7,8 @@ TEMPLATE = app
 CONFIG += release
 SOURCES += main.cpp \
     cserver.cpp \
-    cmapgen.cpp
+    cmapgen.cpp \
+    cclient.cpp
 HEADERS += cserver.h \
-    cmapgen.h
-
+    cmapgen.h \
+    cclient.h
