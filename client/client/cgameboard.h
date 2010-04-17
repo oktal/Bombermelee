@@ -17,6 +17,7 @@ public:
     void setSocket(QTcpSocket *socket);
     void setNick(const std::string &nick);
     void newPlayer(const std::string &nick, const std::string &color);
+    void playerLeft(const std::string &nick);
     void playerMove(const std::string &nick, const std::string &move, const float x, const float y);
 
 private:
@@ -24,6 +25,7 @@ private:
     void OnUpdate();
     void drawWalls();
     void drawOtherPlayers();
+    void drawFPS();
     bool canMove(Direction movement, const float &ElapsedTime);
     sf::Image wall;
     sf::Image box;

@@ -59,6 +59,7 @@ void CGameBoard::OnUpdate()
     Draw(rightBorder);
     drawWalls();
     drawOtherPlayers();
+    drawFPS();
     float ElapsedTime = GetFrameTime();
     if (GetInput().IsKeyDown(sf::Key::Right))
     {
@@ -140,6 +141,16 @@ void CGameBoard::drawOtherPlayers()
         Draw(*player);
         ++it;
     }
+}
+
+void CGameBoard::drawFPS()
+{
+    float ElapsedTime = GetFrameTime();
+    unsigned number_fps = static_cast<int>(ElapsedTime * 1000);
+    sf::String FPS(QString("%1 FPS").arg(number_fps).toStdString());
+    FPS.SetPosition(580, 0);
+    FPS.SetSize(15);
+    Draw(FPS);
 }
 
 /**
@@ -241,6 +252,11 @@ void CGameBoard::newPlayer(const std::string &nick, const std::string &color)
     CPlayer *player = new CPlayer(nick, color);
     player->setCorrectPosition();
     m_otherPlayers[QString(nick.c_str())] = player;
+}
+
+void CGameBoard::playerLeft(const std::string &nick)
+{
+    m_otherPlayers.remove(QString(nick.c_str()));
 }
 
 void CGameBoard::playerMove(const std::string &nick, const std::string &move, const float x, const float y)

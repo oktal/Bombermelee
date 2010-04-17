@@ -35,20 +35,10 @@ static inline char const *_m(const std::string &message)
     return std::string(message + "\r\n").c_str();
 }
 
-static std::string strToLower(const std::string &str)
-{
-    std::string lower = "";
-    for (unsigned i = 0; i < str.size(); ++i)
-    {
-        lower[i] = tolower(str[i]);
-    }
-    return lower;
-}
-
 CClient::CClient(QWidget *parent, const QString &address, const QString &nick) :
         m_address(address), m_nick(nick)
 {
-    m_gameBoard = new CGameBoard(this, QPoint(10, 10), QSize(630, 510), 0.4);
+    m_gameBoard = new CGameBoard(this, QPoint(10, 10), QSize(630, 510), 24);
     m_gameBoard->setNick(nick.toStdString());
 
     m_chatBox = new QTextEdit(this);
@@ -227,6 +217,7 @@ void CClient::processData()
                 break;
             }
         }
+        m_gameBoard->playerLeft(l[1].toStdString());
         break;
     case Users:
         for (int i = 1; i < l.length(); ++i)
