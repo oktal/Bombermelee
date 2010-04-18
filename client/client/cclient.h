@@ -48,7 +48,7 @@ private:
     void readProtocolHeader();
     void processData();
     void appendToChatBox(const QString &text);
-    void appendToUsersList(const QString &text);
+    void appendToUsersList(const QString &nick, const QString &color);
     bool eventFilter(QObject *obj, QEvent *ev);
 
 private slots:

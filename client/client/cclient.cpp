@@ -203,7 +203,7 @@ void CClient::processData()
         appendToChatBox(tr("<font color='blue'><em>%1 has joined the game an "
                            "has been assigned color "
                            "<strong>%2</strong></em></font>").arg(l[1]).arg(l[2]));
-        appendToUsersList(l[1]);
+        appendToUsersList(l[1], l[2]);
         m_gameBoard->newPlayer(l[1].toStdString(), l[2].toStdString());
         break;
     case Part:
@@ -223,7 +223,7 @@ void CClient::processData()
         for (int i = 1; i < l.length(); ++i)
         {
             QStringList c = l[i].split(":");
-            appendToUsersList(c[0]);
+            appendToUsersList(c[0], c[1]);
             if (c[0] != m_nick)
             {
                 m_gameBoard->newPlayer(c[0].toStdString(), c[1].toStdString());
@@ -260,10 +260,11 @@ void CClient::appendToChatBox(const QString &text)
     m_chatBox->append(text);
 }
 
-void CClient::appendToUsersList(const QString &text)
+void CClient::appendToUsersList(const QString &nick, const QString &color)
 {
-    QListWidgetItem *item = new QListWidgetItem(text);
-    item->setIcon(QIcon("../bullet-grey.png"));;
+    QListWidgetItem *item = new QListWidgetItem(nick);
+    QString iconFileName = QString("../bullet-%1.png").arg(color);
+    item->setIcon(QIcon(iconFileName));
     m_lst_users->addItem(item);
 }
 
