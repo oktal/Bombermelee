@@ -46,7 +46,7 @@ BlockType CMap::getBlock(unsigned x, unsigned y)
     }
     else
     {
-        return None;
+        return Floor;
     }
 }
 
@@ -58,5 +58,43 @@ void CMap::setBlock(unsigned x, unsigned y, BlockType block)
     if (x < MAP_WIDTH && y < MAP_HEIGHT)
     {
         m_map[x][y] = block;
+    }
+}
+
+/**
+  Set the map from a string argument
+*/
+void CMap::setMap(const std::string &map)
+{
+    for(unsigned x = 0; x < MAP_WIDTH; x++)
+    {
+        for(unsigned y = 0; y < MAP_HEIGHT; y++)
+        {
+            switch(map[(x+y*MAP_WIDTH)])
+            {
+            case 'W':
+                m_map[x][y] = Wall;
+                break;
+            case 'B':
+                m_map[x][y] = Box;
+                break;
+            case '-':
+               m_map[x][y] = Floor;
+                break;
+            case '+':
+                m_map[x][y] = Bonus;
+                break;
+            case 'P':
+                m_map[x][y] = Player;
+                break;
+            case 'Q':
+                m_map[x][y] = Bomb;
+                break;
+            case 'N':
+            default:
+                m_map[x][y] = None;
+                break;
+            }
+        }
     }
 }

@@ -5,6 +5,7 @@
 #include "Animated.h"
 #include "cplayer.h"
 #include <QString>
+#include <string>
 #include <QHash>
 #include <QTcpSocket>
 
@@ -19,11 +20,12 @@ public:
     void newPlayer(const std::string &nick, const std::string &color);
     void playerLeft(const std::string &nick);
     void playerMove(const std::string &nick, const std::string &move, const float x, const float y);
+    void setMap(std::string map);
 
 private:
     void OnInit();
     void OnUpdate();
-    void drawWalls();
+    void drawMap();
     void drawOtherPlayers();
     void drawFPS();
     bool canMove(Direction movement, const float &ElapsedTime);

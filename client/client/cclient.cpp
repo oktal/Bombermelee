@@ -248,7 +248,8 @@ void CClient::processData()
         }
         break;
     case Map:
-        QMessageBox::information(this, "map", l[1]);
+        //QMessageBox::information(this, "map", );
+        m_gameBoard->setMap(l[1].toStdString());
         break;
     default:
         break;

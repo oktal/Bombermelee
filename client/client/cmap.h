@@ -1,3 +1,5 @@
+#include <string>
+
 #ifndef CMAP_H
 #define CMAP_H
 
@@ -25,6 +27,7 @@ public:
 
     BlockType getBlock(unsigned x, unsigned y);
     void setBlock(unsigned x, unsigned y, BlockType block);
+    void setMap(const std::string &map);
 
 private:
     BlockType m_map[MAP_WIDTH][MAP_HEIGHT];

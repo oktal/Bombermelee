@@ -48,6 +48,14 @@ void CGameBoard::OnInit()
     }
     wall.CreateMaskFromColor(sf::Color(255, 255, 255));
     m_wall.SetImage(wall);
+
+    if (!box.LoadFromFile("../box.png"))
+    {
+        QMessageBox::warning(this, "Warning", tr("Can not load sprite box.png"));
+        return;
+    }
+    box.CreateMaskFromColor(sf::Color(255, 255, 255));
+    m_box.SetImage(box);
 }
 
 /**
@@ -59,7 +67,7 @@ void CGameBoard::OnUpdate()
     sf::Shape rightBorder = sf::Shape::Rectangle(510, 0, 630, 510, sf::Color(127, 127, 127));
     float ElapsedTime = GetFrameTime();
     Draw(rightBorder);
-    drawWalls();
+    drawMap();
     drawOtherPlayers();
     drawFPS();
     if (GetInput().IsKeyDown(sf::Key::Right))
@@ -119,18 +127,45 @@ void CGameBoard::OnUpdate()
 }
 
 /**
-  Draw all the walls (indestructible blocks)
+  Call the setMap method to construct the map from a string
 */
-void CGameBoard::drawWalls()
+void CGameBoard::setMap(std::string map)
 {
-   for (unsigned i = 1; i < 15; i += 2)
-   {
-       for (unsigned j = 1; j < 15; j += 2)
-       {
-           m_wall.SetPosition(34 * i, 34 * j);
-           Draw(m_wall);
-       }
-   }
+    m_map.setMap(map);
+}
+
+/**
+  Draw all the blocs of the map
+*/
+void CGameBoard::drawMap()
+{
+    for(unsigned i = 0; i < 15; i++)
+    {
+        for(unsigned j = 0; j < 15; j++)
+        {
+            switch(m_map.getBlock(i,j))
+            {
+            case Wall:
+                m_wall.SetPosition(34*i, 34*j);
+                Draw(m_wall);
+                break;
+            case Box:
+            case Bonus:
+                m_box.SetPosition(34*i, 34*j);
+                Draw(m_box);
+                break;
+            case Floor:
+                break;
+            case Player:
+                break;
+            case Bomb:
+                break;
+            case None:
+            default:
+                break;
+            }
+        }
+    }
 }
 
 void CGameBoard::drawOtherPlayers()
@@ -219,7 +254,11 @@ bool CGameBoard::canMove(Direction movement, const float &ElapsedTime)
     */
     /* If we want to move on a wall, just return false */
     if (m_map.getBlock(x1, y1) == Wall ||
-        m_map.getBlock(x2, y2) == Wall)
+        m_map.getBlock(x2, y2) == Wall ||
+        m_map.getBlock(x1, y1) == Box ||
+        m_map.getBlock(x2, y2) == Box ||
+        m_map.getBlock(x1, y1) == Bonus ||
+        m_map.getBlock(x2, y2) == Bonus )
     {
         return false;
     }
