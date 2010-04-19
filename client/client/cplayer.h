@@ -32,6 +32,8 @@ private:
     Anim m_player_left;
     Anim m_player_right;
     Anim m_player_explode;
+    unsigned m_maxBombs;
+    unsigned m_pausedBombs;
 };
 
 #endif // CPLAYER_H

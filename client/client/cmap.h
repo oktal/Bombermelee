@@ -13,8 +13,7 @@ enum BlockType
     Floor,
     Bonus,
     Bomb,
-    Player,
-    None
+    Player
 };
 
 /**

@@ -33,6 +33,10 @@ CGameBoard::CGameBoard(QWidget *parent, const QPoint &position, const QSize &siz
         QSFMLCanvas(parent, position, size, FrameTime)
 {
     m_player.Play();
+    warmupTimer = new QTimer(this);
+    m_gameBegin = true;
+    m_warmupTime = 0;
+    m_status = None;
 }
 
 /**
@@ -70,6 +74,9 @@ void CGameBoard::OnUpdate()
     drawMap();
     drawOtherPlayers();
     drawFPS();
+    drawStatus();
+
+    /* RIGHT */
     if (GetInput().IsKeyDown(sf::Key::Right))
     {
         m_player.setDirection(Right);
@@ -82,6 +89,8 @@ void CGameBoard::OnUpdate()
         m_player.anim(ElapsedTime);
 
     }
+
+    /* LEFT */
     else if (GetInput().IsKeyDown(sf::Key::Left))
     {
         m_player.setDirection(Left);
@@ -93,6 +102,8 @@ void CGameBoard::OnUpdate()
         }
         m_player.anim(ElapsedTime);
     }
+
+    /* DOWN */
     else if (GetInput().IsKeyDown(sf::Key::Down))
     {
         m_player.setDirection(Down);
@@ -104,6 +115,8 @@ void CGameBoard::OnUpdate()
         }
         m_player.anim(ElapsedTime);
     }
+
+    /* UP */
     else if (GetInput().IsKeyDown(sf::Key::Up))
     {
         m_player.setDirection(Up);
@@ -127,15 +140,7 @@ void CGameBoard::OnUpdate()
 }
 
 /**
-  Call the setMap method to construct the map from a string
-*/
-void CGameBoard::setMap(std::string map)
-{
-    m_map.setMap(map);
-}
-
-/**
-  Draw all the blocs of the map
+  Draw all the blocks of the map
 */
 void CGameBoard::drawMap()
 {
@@ -160,7 +165,6 @@ void CGameBoard::drawMap()
                 break;
             case Bomb:
                 break;
-            case None:
             default:
                 break;
             }
@@ -170,7 +174,7 @@ void CGameBoard::drawMap()
 
 void CGameBoard::drawOtherPlayers()
 {
-    for (unsigned i = 0; i < m_otherPlayers.size(); ++i)
+    for (int i = 0; i < m_otherPlayers.size(); ++i)
     {
         Draw(*m_otherPlayers[i]);
     }
@@ -187,6 +191,36 @@ void CGameBoard::drawFPS()
 }
 
 /**
+  Draw the current status of the game (text appearing on the top of the gameboard)
+*/
+void CGameBoard::drawStatus()
+{
+    if (m_status == None)
+    {
+        return;
+    }
+    else if (m_status == Warmup)
+    {
+        QString s;
+        sf::String status;
+        if (m_warmupTime == WarmupTime)
+        {
+            s = "GO !";
+            status.SetPosition(240, 10);
+        }
+        else
+        {
+            s = QString("Game will begin in %1 second(s)").arg(WarmupTime - m_warmupTime);
+            status.SetPosition(100, 10);
+        }
+        status.SetText(s.toStdString());
+        status.SetSize(20.f);
+        status.SetStyle(sf::String::Bold);
+        Draw(status);
+    }
+}
+
+/**
   Check if the player can move
   @param movement Direction to go
   @param ElapsedTime FrameTime
@@ -195,6 +229,11 @@ void CGameBoard::drawFPS()
 bool CGameBoard::canMove(Direction movement, const float &ElapsedTime)
 {
     int pos_x1, pos_y1, pos_x2, pos_y2;
+    pos_x1 = pos_y1 = pos_x2 = pos_y2 = 0;
+    if (m_gameBegin == false)
+    {
+        return false;
+    }
     switch (movement)
     {
     case Left:
@@ -252,7 +291,7 @@ bool CGameBoard::canMove(Direction movement, const float &ElapsedTime)
     /*
       END DEBUG
     */
-    /* If we want to move on a wall, just return false */
+    /* If we want to move on a wall or a box, just return false */
     if (m_map.getBlock(x1, y1) == Wall ||
         m_map.getBlock(x2, y2) == Wall ||
         m_map.getBlock(x1, y1) == Box ||
@@ -284,17 +323,59 @@ void CGameBoard::setNick(const std::string &nick){
     m_player.setNick(nick);
 }
 
+/**
+  Call the setMap method to construct the map from a string
+*/
+void CGameBoard::setMap(std::string map)
+{
+    /* Map is received, we can begin the game */
+    m_gameBegin = false;
+    warmupTimer->setInterval(1000);
+    warmupTimer->start();
+    QObject::connect(warmupTimer, SIGNAL(timeout()), this, SLOT(checkWarmupTime()));
+
+    m_status = Warmup;
+    m_warmupTime = 0;
+
+    m_map.setMap(map);
+    m_player.setCorrectPosition();
+    for (int i = 0; i < m_otherPlayers.size(); ++i)
+    {
+        m_otherPlayers[i]->setCorrectPosition();
+    }
+}
+
+void CGameBoard::checkWarmupTime()
+{
+    m_warmupTime++;
+
+    if (m_warmupTime == WarmupTime + 1)
+    {
+        m_gameBegin = true;
+        m_status = None;
+        warmupTimer->stop();
+    }
+}
+
+/**
+  A new player joins the game
+*/
 void CGameBoard::newPlayer(const std::string &nick, const std::string &color)
 {
+    /* Create and add the new player on the other players list */
     CPlayer *player = new CPlayer(nick, color);
     player->setCorrectPosition();
     player->Play();
     m_otherPlayers.append(player);
 }
 
+/**
+  A player leaves the game
+*/
 void CGameBoard::playerLeft(const std::string &nick)
 {
-    for (unsigned i = 0; i < m_otherPlayers.size(); ++i)
+    /* We remove the player from the list */
+    for (int i = 0; i < m_otherPlayers.size(); ++i)
     {
         if (m_otherPlayers[i]->getNick() == nick)
         {
@@ -330,7 +411,7 @@ void CGameBoard::playerMove(const std::string &nick, const std::string &move, co
 CPlayer *CGameBoard::getPlayerFromNick(const std::string &nick)
 {
     CPlayer *player = NULL;
-    for (unsigned i = 0; i < m_otherPlayers.size(); ++i)
+    for (int i = 0; i < m_otherPlayers.size(); ++i)
     {
         if (m_otherPlayers[i]->getNick() == nick)
         {

@@ -9,6 +9,13 @@
 #include <QHash>
 #include <QTcpSocket>
 
+static const unsigned WarmupTime = 5; /* 5 seconds before the game begins */
+
+enum Status
+{
+    Waiting_Player, Warmup, None
+};
+
 class CGameBoard : public QSFMLCanvas
 {
     Q_OBJECT
@@ -23,13 +30,17 @@ public:
     void setMap(std::string map);
 
 private:
+    /* private methods */
     void OnInit();
     void OnUpdate();
     void drawMap();
     void drawOtherPlayers();
     void drawFPS();
+    void drawStatus();
     bool canMove(Direction movement, const float &ElapsedTime);
     CPlayer *getPlayerFromNick(const std::string &nick);
+
+    /* Images and Sprites */
     sf::Image wall;
     sf::Image box;
     sf::Sprite m_wall;
@@ -38,7 +49,14 @@ private:
     QList<CPlayer *> m_otherPlayers;
     QString m_nick;
     QTcpSocket *m_socket;
+    QTimer *warmupTimer;
+    bool m_gameBegin;
+    unsigned m_warmupTime;
     CMap m_map;
+    Status m_status;
+
+private slots:
+    void checkWarmupTime();
 };
 
 #endif // CGAMEBOARD_H

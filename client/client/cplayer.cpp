@@ -22,23 +22,30 @@ CPlayer::CPlayer(const std::string &nick, const std::string &color) :
         m_nick(nick)
 {
     setColor(color);
+    m_pausedBombs = 0;
+    m_maxBombs = 1; /* 1 bomb maximum at the begining */
 
+    /* UP ANIMATION */
     m_player_up.PushFrame(Frame(&m_img_player, sf::Rect<int>(2, 32, 18, 55)));
     m_player_up.PushFrame(Frame(&m_img_player, sf::Rect<int>(23, 32, 39, 55)));
     m_player_up.PushFrame(Frame(&m_img_player, sf::Rect<int>(44, 32, 60, 55)));
 
+    /* DOWN ANIMATION */
     m_player_down.PushFrame(Frame(&m_img_player, sf::Rect<int>(2, 2, 18, 25)));
     m_player_down.PushFrame(Frame(&m_img_player, sf::Rect<int>(23, 2, 39, 25)));
     m_player_down.PushFrame(Frame(&m_img_player, sf::Rect<int>(44, 2, 60, 25)));
 
+    /* LEFT ANIMATION */
     m_player_left.PushFrame(Frame(&m_img_player, sf::Rect<int>(65, 2, 84, 25)));
     m_player_left.PushFrame(Frame(&m_img_player, sf::Rect<int>(89, 2, 105, 25)));
     m_player_left.PushFrame(Frame(&m_img_player, sf::Rect<int>(110, 2, 126, 25)));
 
+    /* RIGHT ANIMATION */
     m_player_right.PushFrame(Frame(&m_img_player, sf::Rect<int>(66, 32, 82, 55)));
     m_player_right.PushFrame(Frame(&m_img_player, sf::Rect<int>(89, 32, 105, 55)));
     m_player_right.PushFrame(Frame(&m_img_player, sf::Rect<int>(110, 32, 126, 55)));
 
+    /* EXPLODE ANIMATION */
     m_player_explode.PushFrame(Frame(&m_img_player, sf::Rect<int>(155, 2, 176, 25)));
     m_player_explode.PushFrame(Frame(&m_img_player, sf::Rect<int>(182, 2, 204, 25)));
     m_player_explode.PushFrame(Frame(&m_img_player, sf::Rect<int>(209, 2, 232, 25)));
@@ -78,6 +85,9 @@ void CPlayer::setDirection(Direction move)
     }
 }
 
+/**
+  Set the color by loading the right sheet
+*/
 void CPlayer::setColor(const std::string &color)
 {
     m_color = color;

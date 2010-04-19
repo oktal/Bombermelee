@@ -29,7 +29,7 @@ CMap::CMap()
             }
             else
             {
-                m_map[i][j] = None;
+                m_map[i][j] = Floor;
             }
         }
     }
@@ -92,7 +92,6 @@ void CMap::setMap(const std::string &map)
                 break;
             case 'N':
             default:
-                m_map[x][y] = None;
                 break;
             }
         }
