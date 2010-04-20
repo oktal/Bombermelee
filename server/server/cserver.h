@@ -6,6 +6,7 @@
 #include <QTcpServer>
 #include <QHash>
 #include "cclient.h"
+#include "cbomb.h"
 
 class CServer : public QMainWindow {
     Q_OBJECT
@@ -16,12 +17,12 @@ public:
     enum DataMessageType
     {
         Undefined,
-        PlainDataText,
         Ehlo, /* EHLO on connect */
         Nick, /* NICK */
         Users, /* USERS Request */
         Say,
         Move, /* Player MOVE */
+        Bomb, /* Player plants a BOMB */
         /* For future */
         Pong /* Pong Answer */
     };
@@ -34,6 +35,7 @@ private slots:
     void onDisconnect();
     void sendMapToClients();
     void processReadyRead();
+    void bombExplode();
 
 private:
     QTextEdit *m_console;
@@ -45,6 +47,7 @@ private:
     QTcpServer *m_server;
     QByteArray m_buffer;
     QList<CClient *> m_clientsList;
+    QQueue<CBomb *> m_bombsList;
     QList<QString> m_colors;
     DataMessageType messageType;
 

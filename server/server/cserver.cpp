@@ -4,6 +4,7 @@
 #include <QTcpSocket>
 #include <QNetworkInterface>
 #include <ctime>
+#include <cstdlib>
 
 /*
 This file is part of Bombermelee.
@@ -116,7 +117,7 @@ void CServer::onDisconnect()
 {
     QTcpSocket *socket = qobject_cast<QTcpSocket *>(sender());
     QString nick = "", color = "";
-    for (unsigned i = 0; i < m_clientsList.size(); ++i)
+    for (int i = 0; i < m_clientsList.size(); ++i)
     {
         if (m_clientsList[i]->getSocket() == socket)
         {
@@ -193,9 +194,13 @@ void CServer::readProtocolHeader()
     {
         messageType = Move;
     }
+    else if (l[0] == "BOMB")
+    {
+        messageType = Bomb;
+    }
     else
     {
-        messageType = PlainDataText;
+        messageType = Undefined;
     }
 }
 
@@ -233,7 +238,7 @@ void CServer::processData(QTcpSocket *sender)
         {
              /* Send the whole users list */
              QString response = "USERS ";
-             for (unsigned i = 0; i < m_clientsList.size(); ++i)
+             for (int i = 0; i < m_clientsList.size(); ++i)
              {
                  response += m_clientsList[i]->getNick() + ":" + m_clientsList[i]->getColor();
                  if (i < m_clientsList.count() - 1)
@@ -251,7 +256,16 @@ void CServer::processData(QTcpSocket *sender)
     case Move:
         broadcast(QString(m_buffer.data()), sender);
         break;
-    case PlainDataText:
+    case Bomb:
+        {
+            unsigned x = strtol(l[2].toStdString().c_str(), NULL, 10);
+            unsigned y = strtol(l[3].toStdString().c_str(), NULL, 10);
+            CBomb *bomb = new CBomb(l[1], x, y);
+            m_bombsList.enqueue(bomb);
+            QObject::connect(bomb, SIGNAL(explode()), this, SLOT(bombExplode()));
+            broadcast(QString(m_buffer.data()), sender);
+        }
+        break;
     case Pong:
     case Undefined:
         break;
@@ -301,6 +315,19 @@ void CServer::sendMapToClients()
     map.generateMap();
     request = "MAP " + map.getMap();
     broadcast(QString(request.c_str()), NULL);
+}
+
+void CServer::bombExplode()
+{
+    CBomb *bomb = qobject_cast<CBomb *>(sender());
+    QString bomber = bomb->bomber;
+    unsigned x = bomb->x;
+    unsigned y = bomb->y;
+    m_bombsList.removeOne(bomb);
+    delete bomb;
+
+    QString request = QString("BOOM %1 %2 %3").arg(bomber).arg(x).arg(y);
+    broadcast(request, NULL);
 }
 
 bool CServer::nickAlreadyInUse(const QString &nick)

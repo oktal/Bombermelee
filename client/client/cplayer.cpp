@@ -22,8 +22,8 @@ CPlayer::CPlayer(const std::string &nick, const std::string &color) :
         m_nick(nick)
 {
     setColor(color);
-    m_pausedBombs = 0;
-    m_maxBombs = 1; /* 1 bomb maximum at the begining */
+    pausedBombs = 0;
+    maxBombs = 1; /* 1 bomb maximum at the begining */
 
     /* UP ANIMATION */
     m_player_up.PushFrame(Frame(&m_img_player, sf::Rect<int>(2, 32, 18, 55)));
@@ -56,6 +56,7 @@ CPlayer::CPlayer(const std::string &nick, const std::string &color) :
 
 void CPlayer::setDirection(Direction move)
 {
+    m_direction = move;
     switch (move)
     {
     case Right:
@@ -85,6 +86,11 @@ void CPlayer::setDirection(Direction move)
     }
 }
 
+Direction CPlayer::getDirection() const
+{
+    return m_direction;
+}
+
 /**
   Set the color by loading the right sheet
 */
@@ -104,7 +110,7 @@ void CPlayer::setNick(const std::string &nick)
     m_nick = nick;
 }
 
-const std::string &CPlayer::getNick()
+const std::string &CPlayer::getNick() const
 {
     return m_nick;
 }

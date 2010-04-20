@@ -32,11 +32,26 @@ static inline char const *_m(const std::string &message)
 CGameBoard::CGameBoard(QWidget *parent, const QPoint &position, const QSize &size, unsigned int FrameTime) :
         QSFMLCanvas(parent, position, size, FrameTime)
 {
-    m_player.Play();
+    CPlayer *me = new CPlayer();
+    me->Play();
+    m_playersList.append(me);
+
     warmupTimer = new QTimer(this);
     m_gameBegin = true;
     m_warmupTime = 0;
     m_status = None;
+
+}
+
+CGameBoard::~CGameBoard()
+{
+    QList<CPlayer *>::const_iterator it = m_playersList.begin();
+    while (it != m_playersList.end())
+    {
+        CPlayer *player = *it;
+        ++it;
+        delete player;
+    }
 }
 
 /**
@@ -60,6 +75,14 @@ void CGameBoard::OnInit()
     }
     box.CreateMaskFromColor(sf::Color(255, 255, 255));
     m_box.SetImage(box);
+
+    if (!bomb.LoadFromFile("../bomb.png"))
+    {
+        QMessageBox::warning(this, "Warning", tr("Can not load sprite bomb-sheet.png"));
+        return;
+    }
+    bomb.CreateMaskFromColor(sf::Color(255, 255, 255));
+    m_bomb.SetImage(bomb);
 }
 
 /**
@@ -72,61 +95,66 @@ void CGameBoard::OnUpdate()
     float ElapsedTime = GetFrameTime();
     Draw(rightBorder);
     drawMap();
-    drawOtherPlayers();
     drawFPS();
     drawStatus();
 
     /* RIGHT */
+    CPlayer *me = m_playersList[0]; /* I am the first player of the list */
     if (GetInput().IsKeyDown(sf::Key::Right))
     {
-        m_player.setDirection(Right);
+        me->setDirection(Right);
         if (canMove(Right, ElapsedTime))
         {
-            m_player.move(Right, ElapsedTime);
-            QString pos = QString("%1 %2").arg(m_player.GetPosition().x).arg(m_player.GetPosition().y);
-            m_socket->write(_m("MOVE " + m_player.getNick() + " RIGHT " + pos.toStdString()));
+            me->move(Right, ElapsedTime);
+            QString pos = QString("%1 %2").arg(me->GetPosition().x).arg(me->GetPosition().y);
+            m_socket->write(_m("MOVE " + me->getNick() + " RIGHT " + pos.toStdString()));
         }
-        m_player.anim(ElapsedTime);
+        me->anim(ElapsedTime);
 
     }
 
     /* LEFT */
     else if (GetInput().IsKeyDown(sf::Key::Left))
     {
-        m_player.setDirection(Left);
+        me->setDirection(Left);
         if (canMove(Left, ElapsedTime))
         {
-            m_player.move(Left, ElapsedTime);
-            QString pos = QString("%1 %2").arg(m_player.GetPosition().x).arg(m_player.GetPosition().y);
-            m_socket->write(_m("MOVE " + m_player.getNick() + " LEFT " + pos.toStdString()));
+            me->move(Left, ElapsedTime);
+            QString pos = QString("%1 %2").arg(me->GetPosition().x).arg(me->GetPosition().y);
+            m_socket->write(_m("MOVE " + me->getNick() + " LEFT " + pos.toStdString()));
         }
-        m_player.anim(ElapsedTime);
+        me->anim(ElapsedTime);
     }
 
     /* DOWN */
     else if (GetInput().IsKeyDown(sf::Key::Down))
     {
-        m_player.setDirection(Down);
+        me->setDirection(Down);
         if (canMove(Down, ElapsedTime))
         {
-            m_player.move(Down, ElapsedTime);
-            QString pos = QString("%1 %2").arg(m_player.GetPosition().x).arg(m_player.GetPosition().y);
-            m_socket->write(_m("MOVE " + m_player.getNick() + " DOWN " + pos.toStdString()));
+            me->move(Down, ElapsedTime);
+            QString pos = QString("%1 %2").arg(me->GetPosition().x).arg(me->GetPosition().y);
+            m_socket->write(_m("MOVE " + me->getNick() + " DOWN " + pos.toStdString()));
         }
-        m_player.anim(ElapsedTime);
+        me->anim(ElapsedTime);
     }
 
     /* UP */
     else if (GetInput().IsKeyDown(sf::Key::Up))
     {
-        m_player.setDirection(Up);
+        me->setDirection(Up);
         if (canMove(Up, ElapsedTime))
         {
-            m_player.move(Up, ElapsedTime);
-            QString pos = QString("%1 %2").arg(m_player.GetPosition().x).arg(m_player.GetPosition().y);
-            m_socket->write(_m("MOVE " + m_player.getNick() + " UP " + pos.toStdString()));
+            me->move(Up, ElapsedTime);
+            QString pos = QString("%1 %2").arg(me->GetPosition().x).arg(me->GetPosition().y);
+            m_socket->write(_m("MOVE " + me->getNick() + " UP " + pos.toStdString()));
         }
-        m_player.anim(ElapsedTime);
+        me->anim(ElapsedTime);
+    }
+    /* SPACE (plant bomb) */
+    else if (GetInput().IsKeyDown(sf::Key::Space))
+    {
+        plantBomb();
     }
     else
     {
@@ -136,7 +164,7 @@ void CGameBoard::OnUpdate()
         }
         */
     }
-    Draw(m_player);
+    drawPlayers();
 }
 
 /**
@@ -164,6 +192,8 @@ void CGameBoard::drawMap()
             case Player:
                 break;
             case Bomb:
+                m_bomb.SetPosition((34 * i) + 6, (34 * j) + 6);
+                Draw(m_bomb);
                 break;
             default:
                 break;
@@ -172,11 +202,11 @@ void CGameBoard::drawMap()
     }
 }
 
-void CGameBoard::drawOtherPlayers()
+void CGameBoard::drawPlayers()
 {
-    for (int i = 0; i < m_otherPlayers.size(); ++i)
+    for (int i = 0; i < m_playersList.size(); ++i)
     {
-        Draw(*m_otherPlayers[i]);
+        Draw(*m_playersList[i]);
     }
 }
 
@@ -193,6 +223,7 @@ void CGameBoard::drawFPS()
 /**
   Draw the current status of the game (text appearing on the top of the gameboard)
 */
+
 void CGameBoard::drawStatus()
 {
     if (m_status == None)
@@ -221,6 +252,46 @@ void CGameBoard::drawStatus()
 }
 
 /**
+  Plant a bomb
+*/
+void CGameBoard::plantBomb()
+{
+    CPlayer *me = m_playersList[0];
+    int pos_x = 0, pos_y = 0;
+    int x = 0, y = 0;
+
+    /*QString p = QString("%1 %2").arg(me->pausedBombs).arg(me->maxBombs);
+    QMessageBox::information(this, "test", p);*/
+    if (me->pausedBombs == me->maxBombs) /* We reached the limit */
+    {
+        return;
+    }
+    pos_x = me->GetPosition().x + (me->GetSubRect().GetWidth() / 2);
+    pos_y = me->GetPosition().y + (me->GetSubRect().GetHeight() / 2);
+    x = pos_x / 34;
+    y = pos_y / 34;
+    m_map.setBlock(x, y, Bomb);
+
+    QString pos = QString("%1 %2").arg(x).arg(y);
+    m_socket->write(_m("BOMB " + me->getNick() + " " + pos.toStdString()));
+    me->pausedBombs++;
+}
+
+void CGameBoard::plantedBomb(const std::string &bomber, unsigned x, unsigned y)
+{
+    m_map.setBlock(x, y, Bomb);
+}
+
+void CGameBoard::bombExplode(const std::string &bomber, unsigned x, unsigned y)
+{
+    if (bomber == m_playersList[0]->getNick()) /* If I am the bomber */
+    {
+        m_playersList[0]->pausedBombs--;
+    }
+    m_map.setBlock(x, y, Floor);
+}
+
+/**
   Check if the player can move
   @param movement Direction to go
   @param ElapsedTime FrameTime
@@ -229,41 +300,42 @@ void CGameBoard::drawStatus()
 bool CGameBoard::canMove(Direction movement, const float &ElapsedTime)
 {
     int pos_x1, pos_y1, pos_x2, pos_y2;
+    CPlayer *me = m_playersList[0];
     pos_x1 = pos_y1 = pos_x2 = pos_y2 = 0;
-    if (m_gameBegin == false)
+    if (!m_gameBegin || !m_connected)
     {
         return false;
     }
     switch (movement)
     {
     case Left:
-        pos_x1 = m_player.GetPosition().x;
-        pos_y1 = m_player.GetPosition().y;
+        pos_x1 = me->GetPosition().x;
+        pos_y1 = me->GetPosition().y;
         pos_x2 = pos_x1;
-        pos_y2 = pos_y1 + m_player.GetSubRect().GetHeight();
+        pos_y2 = pos_y1 + me->GetSubRect().GetHeight();
         pos_x1 -= (Speed * ElapsedTime);
         pos_x2 -= (Speed * ElapsedTime);
         break;
     case Right:
-        pos_x1 = m_player.GetPosition().x + m_player.GetSubRect().GetWidth();
-        pos_y1 = m_player.GetPosition().y;
+        pos_x1 = me->GetPosition().x + me->GetSubRect().GetWidth();
+        pos_y1 = me->GetPosition().y;
         pos_x2 = pos_x1;
-        pos_y2 = pos_y1 + m_player.GetSubRect().GetHeight();
+        pos_y2 = pos_y1 + me->GetSubRect().GetHeight();
         pos_x1 += (Speed * ElapsedTime);
         pos_x2 += (Speed * ElapsedTime);
         break;
     case Up:
-        pos_x1 = m_player.GetPosition().x;
-        pos_y1 = m_player.GetPosition().y;
-        pos_x2 = pos_x1 + m_player.GetSubRect().GetWidth();
+        pos_x1 = me->GetPosition().x;
+        pos_y1 = me->GetPosition().y;
+        pos_x2 = pos_x1 + me->GetSubRect().GetWidth();
         pos_y2 = pos_y1;
         pos_y1 -= (Speed * ElapsedTime);
         pos_y2 -= (Speed * ElapsedTime);
         break;
     case Down:
-        pos_x1 = m_player.GetPosition().x;
-        pos_y1 = m_player.GetPosition().y + m_player.GetSubRect().GetHeight();
-        pos_x2 = pos_x1 + m_player.GetSubRect().GetWidth();
+        pos_x1 = me->GetPosition().x;
+        pos_y1 = me->GetPosition().y + me->GetSubRect().GetHeight();
+        pos_x2 = pos_x1 + me->GetSubRect().GetWidth();
         pos_y2 = pos_y1;
         pos_y1 += (Speed * ElapsedTime);
         pos_y2 += (Speed * ElapsedTime);
@@ -297,21 +369,31 @@ bool CGameBoard::canMove(Direction movement, const float &ElapsedTime)
         m_map.getBlock(x1, y1) == Box ||
         m_map.getBlock(x2, y2) == Box ||
         m_map.getBlock(x1, y1) == Bonus ||
-        m_map.getBlock(x2, y2) == Bonus )
+        m_map.getBlock(x2, y2) == Bonus)
     {
         return false;
     }
-    /* We can move */
-    else
+    /* If the case we want to move is a bomb */
+    else if (m_map.getBlock(x1, y1) == Bomb ||
+             m_map.getBlock(x2, y2) == Bomb)
     {
-        return true;
+        /* Where are we ? */
+        unsigned my_x1 = (me->GetPosition().x + (me->GetSubRect().GetWidth() / 2)) / 34;
+        unsigned my_y1 = (me->GetPosition().y + (me->GetSubRect().GetHeight() / 2)) / 34;
+        /* If we already are on a bomb, we can run */
+        if (m_map.getBlock(my_x1, my_y1) != Bomb)
+        {
+            return false;
+        }
     }
+    /* We can move */
+    return true;
 }
 
 void CGameBoard::setPlayerColor(std::string color)
 {
-    m_player.setColor(color);
-    m_player.setCorrectPosition();
+    m_playersList[0]->setColor(color);
+    m_playersList[0]->setCorrectPosition();
 }
 
 void CGameBoard::setSocket(QTcpSocket *socket)
@@ -320,7 +402,7 @@ void CGameBoard::setSocket(QTcpSocket *socket)
 }
 
 void CGameBoard::setNick(const std::string &nick){
-    m_player.setNick(nick);
+    m_playersList[0]->setNick(nick);
 }
 
 /**
@@ -338,10 +420,9 @@ void CGameBoard::setMap(std::string map)
     m_warmupTime = 0;
 
     m_map.setMap(map);
-    m_player.setCorrectPosition();
-    for (int i = 0; i < m_otherPlayers.size(); ++i)
+    for (int i = 0; i < m_playersList.size(); ++i)
     {
-        m_otherPlayers[i]->setCorrectPosition();
+        m_playersList[i]->setCorrectPosition();
     }
 }
 
@@ -357,6 +438,11 @@ void CGameBoard::checkWarmupTime()
     }
 }
 
+void CGameBoard::setConnected(bool connected)
+{
+    m_connected = connected;
+}
+
 /**
   A new player joins the game
 */
@@ -366,7 +452,7 @@ void CGameBoard::newPlayer(const std::string &nick, const std::string &color)
     CPlayer *player = new CPlayer(nick, color);
     player->setCorrectPosition();
     player->Play();
-    m_otherPlayers.append(player);
+    m_playersList.append(player);
 }
 
 /**
@@ -375,11 +461,11 @@ void CGameBoard::newPlayer(const std::string &nick, const std::string &color)
 void CGameBoard::playerLeft(const std::string &nick)
 {
     /* We remove the player from the list */
-    for (int i = 0; i < m_otherPlayers.size(); ++i)
+    for (int i = 0; i < m_playersList.size(); ++i)
     {
-        if (m_otherPlayers[i]->getNick() == nick)
+        if (m_playersList[i]->getNick() == nick)
         {
-            m_otherPlayers.removeAt(i);
+            m_playersList.removeAt(i);
             break;
         }
     }
@@ -411,11 +497,11 @@ void CGameBoard::playerMove(const std::string &nick, const std::string &move, co
 CPlayer *CGameBoard::getPlayerFromNick(const std::string &nick)
 {
     CPlayer *player = NULL;
-    for (int i = 0; i < m_otherPlayers.size(); ++i)
+    for (int i = 0; i < m_playersList.size(); ++i)
     {
-        if (m_otherPlayers[i]->getNick() == nick)
+        if (m_playersList[i]->getNick() == nick)
         {
-            player = m_otherPlayers[i];
+            player = m_playersList[i];
             break;
         }
     }

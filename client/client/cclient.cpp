@@ -130,7 +130,6 @@ void CClient::readProtocolHeader()
     }
     else if (l[0] == "OK")
     {
-
         messageType = Ok;
     }
     else if (l[0] == "FULL")
@@ -165,6 +164,14 @@ void CClient::readProtocolHeader()
     {
         messageType = Map;
     }
+    else if (l[0] == "BOMB")
+    {
+        messageType = Bomb;
+    }
+    else if (l[0] == "BOOM")
+    {
+        messageType = Boom;
+    }
 }
 
 void CClient::processData()
@@ -196,6 +203,7 @@ void CClient::processData()
         appendToChatBox(tr("<font color='blue'><em>You have been assigned color "
                            "<strong>%2</strong></em></font>").arg(l[1]));
         m_gameBoard->setPlayerColor(l[1].toStdString());
+        m_gameBoard->setConnected(true);
         setWindowTitle(m_nick + " connected on " + m_address);
         m_socket->write(_m("USERS"));
         break;
@@ -248,8 +256,21 @@ void CClient::processData()
         }
         break;
     case Map:
-        //QMessageBox::information(this, "map", );
         m_gameBoard->setMap(l[1].toStdString());
+        break;
+    case Bomb:
+        {
+            unsigned x = strtol(l[2].toStdString().c_str(), NULL, 10);
+            unsigned y = strtol(l[3].toStdString().c_str(), NULL, 10);
+            m_gameBoard->plantedBomb(l[1].toStdString(), x, y);
+        }
+        break;
+    case Boom:
+        {
+            unsigned x = strtol(l[2].toStdString().c_str(), NULL, 10);
+            unsigned y = strtol(l[3].toStdString().c_str(), NULL, 10);
+            m_gameBoard->bombExplode(l[1].toStdString(), x, y);
+        }
         break;
     default:
         break;

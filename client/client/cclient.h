@@ -24,6 +24,8 @@ public:
         Say,
         Move,
         Map,
+        Boom, /* A bomb explode */
+        Bomb,
         /* For future */
         Ping /* Ping Request */
     };

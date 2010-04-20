@@ -8,7 +8,9 @@ CONFIG += release
 SOURCES += main.cpp \
     cserver.cpp \
     cmapgen.cpp \
-    cclient.cpp
+    cclient.cpp \
+    cbomb.cpp
 HEADERS += cserver.h \
     cmapgen.h \
-    cclient.h
+    cclient.h \
+    cbomb.h
