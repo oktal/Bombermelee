@@ -20,8 +20,11 @@ public:
     void setColor(const std::string &color);
     void setNick(const std::string &nick);
     void setCorrectPosition();
-    const std::string &getNick();
+    const std::string &getNick() const;
+    Direction getDirection() const;
     void explode();
+    unsigned maxBombs;
+    unsigned pausedBombs;
 
 private:
     std::string m_color;
@@ -32,8 +35,7 @@ private:
     Anim m_player_left;
     Anim m_player_right;
     Anim m_player_explode;
-    unsigned m_maxBombs;
-    unsigned m_pausedBombs;
+    Direction m_direction;
 };
 
 #endif // CPLAYER_H
