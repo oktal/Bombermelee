@@ -28,3 +28,4 @@ SOURCES += cconnect.cpp \
     cplayer.cpp \
     cmap.cpp
 QT += network
+QT += multimedia

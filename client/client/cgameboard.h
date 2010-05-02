@@ -9,11 +9,12 @@
 #include <QHash>
 #include <QTcpSocket>
 
+
 static const unsigned WarmupTime = 5; /* 5 seconds before the game begins */
 
 enum Status
 {
-    Waiting_Player, Warmup, None
+    Waiting_Players, Warmup, None
 };
 
 class CGameBoard : public QSFMLCanvas
@@ -49,9 +50,16 @@ private:
     sf::Image wall;
     sf::Image box;
     sf::Image bomb;
+    sf::Image bonus;
+    sf::Image flames;
     sf::Sprite m_wall;
     sf::Sprite m_box;
     sf::Sprite m_bomb;
+    sf::Sprite m_bonus;
+
+    QVector<Frame> m_flames;
+
+
     QList<CPlayer *> m_playersList;
     QString m_nick;
     QTcpSocket *m_socket;

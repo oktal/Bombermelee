@@ -2,6 +2,7 @@
 #include "Animated.h"
 #include "cplayer.h"
 #include <QtGui>
+#include <QtMultimedia>
 
 /*
 This file is part of Bombermelee.
@@ -39,7 +40,7 @@ CGameBoard::CGameBoard(QWidget *parent, const QPoint &position, const QSize &siz
     warmupTimer = new QTimer(this);
     m_gameBegin = true;
     m_warmupTime = 0;
-    m_status = None;
+    m_status = Waiting_Players;
 
 }
 
@@ -83,6 +84,15 @@ void CGameBoard::OnInit()
     }
     bomb.CreateMaskFromColor(sf::Color(255, 255, 255));
     m_bomb.SetImage(bomb);
+
+    if (!bonus.LoadFromFile("../bonus.png"))
+    {
+        QMessageBox::warning(this, "Warning", tr("Can not load sprite bonus.png"));
+        return;
+    }
+    bonus.CreateMaskFromColor(sf::Color(255, 255, 255));
+    m_bonus.SetImage(bonus);
+
 }
 
 /**
@@ -183,9 +193,12 @@ void CGameBoard::drawMap()
                 Draw(m_wall);
                 break;
             case Box:
-            case Bonus:
                 m_box.SetPosition(34*i, 34*j);
                 Draw(m_box);
+                break;
+            case Bonus:
+                m_bonus.SetPosition(34*i, 34*j);
+                Draw(m_bonus);
                 break;
             case Floor:
                 break;
@@ -230,6 +243,14 @@ void CGameBoard::drawStatus()
     {
         return;
     }
+    else if (m_status == Waiting_Players)
+    {
+        sf::String status("Waiting for players");
+        status.SetSize(20.f);
+        status.SetStyle(sf::String::Bold);
+        status.SetPosition(150, 5);
+        Draw(status);
+    }
     else if (m_status == Warmup)
     {
         QString s;
@@ -237,12 +258,12 @@ void CGameBoard::drawStatus()
         if (m_warmupTime == WarmupTime)
         {
             s = "GO !";
-            status.SetPosition(240, 10);
+            status.SetPosition(240, 5);
         }
         else
         {
             s = QString("Game will begin in %1 second(s)").arg(WarmupTime - m_warmupTime);
-            status.SetPosition(100, 10);
+            status.SetPosition(100, 5);
         }
         status.SetText(s.toStdString());
         status.SetSize(20.f);
@@ -260,8 +281,6 @@ void CGameBoard::plantBomb()
     int pos_x = 0, pos_y = 0;
     int x = 0, y = 0;
 
-    /*QString p = QString("%1 %2").arg(me->pausedBombs).arg(me->maxBombs);
-    QMessageBox::information(this, "test", p);*/
     if (me->pausedBombs == me->maxBombs) /* We reached the limit */
     {
         return;
@@ -275,11 +294,13 @@ void CGameBoard::plantBomb()
     QString pos = QString("%1 %2").arg(x).arg(y);
     m_socket->write(_m("BOMB " + me->getNick() + " " + pos.toStdString()));
     me->pausedBombs++;
+    QSound::play("../plant.wav");
 }
 
 void CGameBoard::plantedBomb(const std::string &bomber, unsigned x, unsigned y)
 {
     m_map.setBlock(x, y, Bomb);
+    QSound::play("../plant.wav");
 }
 
 void CGameBoard::bombExplode(const std::string &bomber, unsigned x, unsigned y)
@@ -289,6 +310,7 @@ void CGameBoard::bombExplode(const std::string &bomber, unsigned x, unsigned y)
         m_playersList[0]->pausedBombs--;
     }
     m_map.setBlock(x, y, Floor);
+    QSound::play("../explosion.wav");
 }
 
 /**
@@ -309,33 +331,33 @@ bool CGameBoard::canMove(Direction movement, const float &ElapsedTime)
     switch (movement)
     {
     case Left:
-        pos_x1 = me->GetPosition().x;
-        pos_y1 = me->GetPosition().y;
+        pos_x1 = me->GetPosition().x + 2;
+        pos_y1 = me->GetPosition().y + 2;
         pos_x2 = pos_x1;
-        pos_y2 = pos_y1 + me->GetSubRect().GetHeight();
+        pos_y2 = pos_y1 + me->GetSubRect().GetHeight() - 4;
         pos_x1 -= (Speed * ElapsedTime);
         pos_x2 -= (Speed * ElapsedTime);
         break;
     case Right:
-        pos_x1 = me->GetPosition().x + me->GetSubRect().GetWidth();
-        pos_y1 = me->GetPosition().y;
+        pos_x1 = me->GetPosition().x + me->GetSubRect().GetWidth() - 2;
+        pos_y1 = me->GetPosition().y + 2;
         pos_x2 = pos_x1;
-        pos_y2 = pos_y1 + me->GetSubRect().GetHeight();
+        pos_y2 = pos_y1 + me->GetSubRect().GetHeight() - 2;
         pos_x1 += (Speed * ElapsedTime);
         pos_x2 += (Speed * ElapsedTime);
         break;
     case Up:
-        pos_x1 = me->GetPosition().x;
-        pos_y1 = me->GetPosition().y;
-        pos_x2 = pos_x1 + me->GetSubRect().GetWidth();
+        pos_x1 = me->GetPosition().x + 2;
+        pos_y1 = me->GetPosition().y + 2;
+        pos_x2 = pos_x1 + me->GetSubRect().GetWidth() - 4;
         pos_y2 = pos_y1;
         pos_y1 -= (Speed * ElapsedTime);
         pos_y2 -= (Speed * ElapsedTime);
         break;
     case Down:
-        pos_x1 = me->GetPosition().x;
-        pos_y1 = me->GetPosition().y + me->GetSubRect().GetHeight();
-        pos_x2 = pos_x1 + me->GetSubRect().GetWidth();
+        pos_x1 = me->GetPosition().x + 2;
+        pos_y1 = me->GetPosition().y + me->GetSubRect().GetHeight() - 2;
+        pos_x2 = pos_x1 + me->GetSubRect().GetWidth() - 4;
         pos_y2 = pos_y1;
         pos_y1 += (Speed * ElapsedTime);
         pos_y2 += (Speed * ElapsedTime);
@@ -359,6 +381,10 @@ bool CGameBoard::canMove(Direction movement, const float &ElapsedTime)
     sf::String str(s.toStdString());
     str.SetPosition(520, 10);
     str.SetSize(20.f);
+    Draw(str);
+    s = QString("%1 %2").arg(x2).arg(y2);
+    str.SetText(s.toStdString());
+    str.SetPosition(520, 30);
     Draw(str);
     /*
       END DEBUG
@@ -453,6 +479,7 @@ void CGameBoard::newPlayer(const std::string &nick, const std::string &color)
     player->setCorrectPosition();
     player->Play();
     m_playersList.append(player);
+    m_status = None;
 }
 
 /**
