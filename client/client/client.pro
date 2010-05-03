@@ -16,7 +16,8 @@ HEADERS += cconnect.h \
     Anim.h \
     Animated.h \
     cplayer.h \
-    cmap.h
+    cmap.h \
+    cimagemanager.h
 SOURCES += cconnect.cpp \
     main.cpp \
     QSFMLCanvas.cpp \
@@ -26,6 +27,7 @@ SOURCES += cconnect.cpp \
     Anim.cpp \
     Animated.cpp \
     cplayer.cpp \
-    cmap.cpp
+    cmap.cpp \
+    cimagemanager.cpp
 QT += network
 QT += multimedia
