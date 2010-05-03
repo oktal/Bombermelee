@@ -1,6 +1,7 @@
 #include "cgameboard.h"
 #include "Animated.h"
 #include "cplayer.h"
+#include "cimagemanager.h"
 #include <QtGui>
 #include <QtMultimedia>
 
@@ -61,37 +62,14 @@ CGameBoard::~CGameBoard()
 */
 void CGameBoard::OnInit()
 {
-    if (!wall.LoadFromFile("../mur.png"))
-    {
-        QMessageBox::warning(this, "Warning", tr("Can not load sprite wall.png"));
-        return;
-    }
-    wall.CreateMaskFromColor(sf::Color(255, 255, 255));
-    m_wall.SetImage(wall);
+    CImageManager *imageManager = CImageManager::GetInstance();
+    m_wall.SetImage(*imageManager->GetImage("../mur.png"));
 
-    if (!box.LoadFromFile("../box.png"))
-    {
-        QMessageBox::warning(this, "Warning", tr("Can not load sprite box.png"));
-        return;
-    }
-    box.CreateMaskFromColor(sf::Color(255, 255, 255));
-    m_box.SetImage(box);
+    m_box.SetImage(*imageManager->GetImage("../box.png"));
 
-    if (!bomb.LoadFromFile("../bomb.png"))
-    {
-        QMessageBox::warning(this, "Warning", tr("Can not load sprite bomb-sheet.png"));
-        return;
-    }
-    bomb.CreateMaskFromColor(sf::Color(255, 255, 255));
-    m_bomb.SetImage(bomb);
+    m_bomb.SetImage(*imageManager->GetImage("../bomb.png"));
 
-    if (!bonus.LoadFromFile("../bonus.png"))
-    {
-        QMessageBox::warning(this, "Warning", tr("Can not load sprite bonus.png"));
-        return;
-    }
-    bonus.CreateMaskFromColor(sf::Color(255, 255, 255));
-    m_bonus.SetImage(bonus);
+    m_bonus.SetImage(*imageManager->GetImage("../bonus.png"));
 
 }
 

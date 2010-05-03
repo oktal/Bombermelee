@@ -8,6 +8,7 @@
 #include <string>
 #include <QHash>
 #include <QTcpSocket>
+#include "cimagemanager.h"
 
 
 static const unsigned WarmupTime = 5; /* 5 seconds before the game begins */
@@ -47,11 +48,6 @@ private:
     CPlayer *getPlayerFromNick(const std::string &nick);
 
     /* Images and Sprites */
-    sf::Image wall;
-    sf::Image box;
-    sf::Image bomb;
-    sf::Image bonus;
-    sf::Image flames;
     sf::Sprite m_wall;
     sf::Sprite m_box;
     sf::Sprite m_bomb;
