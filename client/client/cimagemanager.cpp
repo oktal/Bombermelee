@@ -1,4 +1,5 @@
 #include "cimagemanager.h"
+#include <iostream>
 
 CImageManager *CImageManager::instance = NULL;
 
@@ -13,6 +14,7 @@ CImageManager::CImageManager()
 CImageManager::~CImageManager()
 {
   //On détruit toutes les images restantes
+  std::cout << "~CImageManager()";
   std::map<std::string, sf::Image*>::iterator it;
   for(it = Images.begin(); it != Images.end(); it++)
   {

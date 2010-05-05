@@ -31,13 +31,22 @@ static inline char const *_m(const std::string &message)
     return std::string(message + "\r\n").c_str();
 }
 
+static void send(QTcpSocket *to, const std::string &what)
+{
+    const qint64 len = what.length() + 2;
+    qDebug() << what.c_str();
+    while (to->write(_m(what)) != len)
+    {
+
+    }
+}
+
 CGameBoard::CGameBoard(QWidget *parent, const QPoint &position, const QSize &size, unsigned int FrameTime) :
         QSFMLCanvas(parent, position, size, FrameTime)
 {
     CPlayer *me = new CPlayer();
     me->Play();
     m_playersList.append(me);
-
     warmupTimer = new QTimer(this);
     m_gameBegin = true;
     m_warmupTime = 0;
@@ -70,7 +79,6 @@ void CGameBoard::OnInit()
     m_bomb.SetImage(*imageManager->GetImage("../bomb.png"));
 
     m_bonus.SetImage(*imageManager->GetImage("../bonus.png"));
-
 }
 
 /**
@@ -80,78 +88,119 @@ void CGameBoard::OnUpdate()
 {
     Clear(sf::Color(195, 195, 195)); /* Grey */
     sf::Shape rightBorder = sf::Shape::Rectangle(510, 0, 630, 510, sf::Color(127, 127, 127));
-    float ElapsedTime = GetFrameTime();
     Draw(rightBorder);
     drawMap();
     drawFPS();
     drawStatus();
 
-    /* RIGHT */
+    /* Handling Event */
     CPlayer *me = m_playersList[0]; /* I am the first player of the list */
     if (GetInput().IsKeyDown(sf::Key::Right))
     {
-        me->setDirection(Right);
-        if (canMove(Right, ElapsedTime))
+        if (me->canMove(Right, m_map))
         {
-            me->move(Right, ElapsedTime);
-            QString pos = QString("%1 %2").arg(me->GetPosition().x).arg(me->GetPosition().y);
-            m_socket->write(_m("MOVE " + me->getNick() + " RIGHT " + pos.toStdString()));
+            if (me->getDirection() != Right)
+            {
+                send(m_socket , "MOVE " + me->getNick() + " RIGHT");
+                me->setDirection(Right);
+            }
+         }
+        else
+        {
+            if (me->getDirection() != Stopped)
+            {
+                me->setDirection(Stopped);
+                send(m_socket, "MOVE " + me->getNick() + " STOP");
+            }
         }
-        me->anim(ElapsedTime);
+        if (me->IsPaused())
+        {
+            me->Play();
+        }
+    }
+     else if (GetInput().IsKeyDown(sf::Key::Left))
+     {
+         if (me->canMove(Left, m_map))
+         {
+              if (me->getDirection() != Left)
+              {
+                  send(m_socket, "MOVE " + me->getNick() + " LEFT");
+                  me->setDirection(Left);
+              }
+          }
+         else
+         {
+             if (me->getDirection() != Stopped)
+             {
+                 me->setDirection(Stopped);
+                 send(m_socket, "MOVE " + me->getNick() + " STOP");
+             }
+         }
+         if (me->IsPaused())
+         {
+             me->Play();
+         }
+     }
+     else if (GetInput().IsKeyDown(sf::Key::Down))
+     {
+         if (me->canMove(Down, m_map))
+         {
+              if (me->getDirection() != Down)
+              {
+                   send(m_socket, "MOVE " + me->getNick() + " DOWN");
+                   me->setDirection(Down);
+              }
+          }
+         else
+         {
+             if (me->getDirection() != Stopped)
+             {
+                 me->setDirection(Stopped);
+                 send(m_socket, "MOVE " + me->getNick() + " STOP");
+             }
+         }
+         if (me->IsPaused())
+         {
+             me->Play();
+         }
+     }
+     else if (GetInput().IsKeyDown(sf::Key::Up))
+     {
+         if (me->canMove(Up, m_map))
+         {
+               if (me->getDirection() != Up)
+               {
+                    send(m_socket, "MOVE " + me->getNick() + " UP");
+                    me->setDirection(Up);
+               }
+         }
+         else
+         {
+             if (me->getDirection() != Stopped)
+             {
+                 me->setDirection(Stopped);
+                 send(m_socket, "MOVE " + me->getNick() + " STOP");
+             }
+         }
+         if (me->IsPaused())
+         {
+             me->Play();
+         }
 
-    }
-
-    /* LEFT */
-    else if (GetInput().IsKeyDown(sf::Key::Left))
-    {
-        me->setDirection(Left);
-        if (canMove(Left, ElapsedTime))
-        {
-            me->move(Left, ElapsedTime);
-            QString pos = QString("%1 %2").arg(me->GetPosition().x).arg(me->GetPosition().y);
-            m_socket->write(_m("MOVE " + me->getNick() + " LEFT " + pos.toStdString()));
-        }
-        me->anim(ElapsedTime);
-    }
-
-    /* DOWN */
-    else if (GetInput().IsKeyDown(sf::Key::Down))
-    {
-        me->setDirection(Down);
-        if (canMove(Down, ElapsedTime))
-        {
-            me->move(Down, ElapsedTime);
-            QString pos = QString("%1 %2").arg(me->GetPosition().x).arg(me->GetPosition().y);
-            m_socket->write(_m("MOVE " + me->getNick() + " DOWN " + pos.toStdString()));
-        }
-        me->anim(ElapsedTime);
-    }
-
-    /* UP */
-    else if (GetInput().IsKeyDown(sf::Key::Up))
-    {
-        me->setDirection(Up);
-        if (canMove(Up, ElapsedTime))
-        {
-            me->move(Up, ElapsedTime);
-            QString pos = QString("%1 %2").arg(me->GetPosition().x).arg(me->GetPosition().y);
-            m_socket->write(_m("MOVE " + me->getNick() + " UP " + pos.toStdString()));
-        }
-        me->anim(ElapsedTime);
-    }
-    /* SPACE (plant bomb) */
-    else if (GetInput().IsKeyDown(sf::Key::Space))
-    {
-        plantBomb();
-    }
-    else
-    {
-        /*if (!m_player.IsStoped())
-        {
-            m_player.Stop();
-        }
-        */
-    }
+     }
+     else if (GetInput().IsKeyDown(sf::Key::Space))
+     {
+         plantBomb();
+     }
+     else
+     {
+         if (me->getDirection() != Stopped)
+         {
+             me->setDirection(Stopped);
+             send(m_socket, "MOVE " + me->getNick() + " STOP");
+         }
+         me->Pause();
+     }
     drawPlayers();
 }
 
@@ -197,7 +246,13 @@ void CGameBoard::drawPlayers()
 {
     for (int i = 0; i < m_playersList.size(); ++i)
     {
-        Draw(*m_playersList[i]);
+        CPlayer *player = m_playersList[i];
+        if (player->getDirection() != Stopped)
+        {
+            player->move(player->getDirection(), GetFrameTime());
+        }
+        player->anim(GetFrameTime());
+        Draw(*player);
     }
 }
 
@@ -291,108 +346,6 @@ void CGameBoard::bombExplode(const std::string &bomber, unsigned x, unsigned y)
     QSound::play("../explosion.wav");
 }
 
-/**
-  Check if the player can move
-  @param movement Direction to go
-  @param ElapsedTime FrameTime
-  @return true if the player can move, false if not
-*/
-bool CGameBoard::canMove(Direction movement, const float &ElapsedTime)
-{
-    int pos_x1, pos_y1, pos_x2, pos_y2;
-    CPlayer *me = m_playersList[0];
-    pos_x1 = pos_y1 = pos_x2 = pos_y2 = 0;
-    if (!m_gameBegin || !m_connected)
-    {
-        return false;
-    }
-    switch (movement)
-    {
-    case Left:
-        pos_x1 = me->GetPosition().x + 2;
-        pos_y1 = me->GetPosition().y + 2;
-        pos_x2 = pos_x1;
-        pos_y2 = pos_y1 + me->GetSubRect().GetHeight() - 4;
-        pos_x1 -= (Speed * ElapsedTime);
-        pos_x2 -= (Speed * ElapsedTime);
-        break;
-    case Right:
-        pos_x1 = me->GetPosition().x + me->GetSubRect().GetWidth() - 2;
-        pos_y1 = me->GetPosition().y + 2;
-        pos_x2 = pos_x1;
-        pos_y2 = pos_y1 + me->GetSubRect().GetHeight() - 2;
-        pos_x1 += (Speed * ElapsedTime);
-        pos_x2 += (Speed * ElapsedTime);
-        break;
-    case Up:
-        pos_x1 = me->GetPosition().x + 2;
-        pos_y1 = me->GetPosition().y + 2;
-        pos_x2 = pos_x1 + me->GetSubRect().GetWidth() - 4;
-        pos_y2 = pos_y1;
-        pos_y1 -= (Speed * ElapsedTime);
-        pos_y2 -= (Speed * ElapsedTime);
-        break;
-    case Down:
-        pos_x1 = me->GetPosition().x + 2;
-        pos_y1 = me->GetPosition().y + me->GetSubRect().GetHeight() - 2;
-        pos_x2 = pos_x1 + me->GetSubRect().GetWidth() - 4;
-        pos_y2 = pos_y1;
-        pos_y1 += (Speed * ElapsedTime);
-        pos_y2 += (Speed * ElapsedTime);
-        break;
-    }
-    if ((movement == Left && pos_x1 < 0) ||
-        (movement == Right && pos_x1 > 510) ||
-        (movement == Up && pos_y1 < 0) ||
-        (movement == Down && pos_y1 > 510))
-    {
-        return false;
-    }
-    /*
-      DEBUG
-    */
-    unsigned x1 = pos_x1 / 34;
-    unsigned y1 = pos_y1 / 34;
-    unsigned x2 = pos_x2 / 34;
-    unsigned y2 = pos_y2 / 34;
-    QString s = QString("%1 %2").arg(x1).arg(y1);
-    sf::String str(s.toStdString());
-    str.SetPosition(520, 10);
-    str.SetSize(20.f);
-    Draw(str);
-    s = QString("%1 %2").arg(x2).arg(y2);
-    str.SetText(s.toStdString());
-    str.SetPosition(520, 30);
-    Draw(str);
-    /*
-      END DEBUG
-    */
-    /* If we want to move on a wall or a box, just return false */
-    if (m_map.getBlock(x1, y1) == Wall ||
-        m_map.getBlock(x2, y2) == Wall ||
-        m_map.getBlock(x1, y1) == Box ||
-        m_map.getBlock(x2, y2) == Box ||
-        m_map.getBlock(x1, y1) == Bonus ||
-        m_map.getBlock(x2, y2) == Bonus)
-    {
-        return false;
-    }
-    /* If the case we want to move is a bomb */
-    else if (m_map.getBlock(x1, y1) == Bomb ||
-             m_map.getBlock(x2, y2) == Bomb)
-    {
-        /* Where are we ? */
-        unsigned my_x1 = (me->GetPosition().x + (me->GetSubRect().GetWidth() / 2)) / 34;
-        unsigned my_y1 = (me->GetPosition().y + (me->GetSubRect().GetHeight() / 2)) / 34;
-        /* If we already are on a bomb, we can run */
-        if (m_map.getBlock(my_x1, my_y1) != Bomb)
-        {
-            return false;
-        }
-    }
-    /* We can move */
-    return true;
-}
 
 void CGameBoard::setPlayerColor(std::string color)
 {
@@ -438,6 +391,7 @@ void CGameBoard::checkWarmupTime()
     {
         m_gameBegin = true;
         m_status = None;
+        m_warmupTime = 0;
         warmupTimer->stop();
     }
 }
@@ -455,7 +409,6 @@ void CGameBoard::newPlayer(const std::string &nick, const std::string &color)
     /* Create and add the new player on the other players list */
     CPlayer *player = new CPlayer(nick, color);
     player->setCorrectPosition();
-    player->Play();
     m_playersList.append(player);
     m_status = None;
 }
@@ -476,27 +429,34 @@ void CGameBoard::playerLeft(const std::string &nick)
     }
 }
 
-void CGameBoard::playerMove(const std::string &nick, const std::string &move, const float x, const float y)
+void CGameBoard::playerMove(const std::string &nick, const std::string &move)
 {
     CPlayer *player = getPlayerFromNick(nick);
     if (move == "LEFT")
     {
         player->setDirection(Left);
+        player->Play();
     }
     else if (move == "RIGHT")
     {
         player->setDirection(Right);
+        player->Play();
     }
     else if (move == "UP")
     {
         player->setDirection(Up);
+        player->Play();
     }
     else if (move == "DOWN")
     {
         player->setDirection(Down);
+        player->Play();
     }
-    player->SetPosition(x, y);
-    player->anim(GetFrameTime());
+    else if (move == "STOP")
+    {
+        player->setDirection(Stopped);
+        player->Stop();
+    }
 }
 
 CPlayer *CGameBoard::getPlayerFromNick(const std::string &nick)
