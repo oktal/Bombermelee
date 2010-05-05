@@ -249,11 +249,7 @@ void CClient::processData()
         }
         break;
     case Move:
-        {
-            float x = strtod(l[3].toStdString().c_str(), NULL);
-            float y = strtod(l[4].toStdString().c_str(), NULL);
-            m_gameBoard->playerMove(l[1].toStdString(), l[2].toStdString(), x, y);
-        }
+        m_gameBoard->playerMove(l[1].toStdString(), l[2].toStdString());
         break;
     case Map:
         m_gameBoard->setMap(l[1].toStdString());

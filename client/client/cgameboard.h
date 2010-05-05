@@ -29,7 +29,7 @@ public:
     void setNick(const std::string &nick);
     void newPlayer(const std::string &nick, const std::string &color);
     void playerLeft(const std::string &nick);
-    void playerMove(const std::string &nick, const std::string &move, const float x, const float y);
+    void playerMove(const std::string &nick, const std::string &move);
     void setMap(std::string map);
     void bombExplode(const std::string &bomber, unsigned x, unsigned y);
     void plantedBomb(const std::string &bomber, unsigned x, unsigned y);
@@ -43,7 +43,7 @@ private:
     void drawPlayers();
     void drawFPS();
     void drawStatus();
-    bool canMove(Direction movement, const float &ElapsedTime);
+    bool canMove(Direction movement);
     void plantBomb();
     CPlayer *getPlayerFromNick(const std::string &nick);
 

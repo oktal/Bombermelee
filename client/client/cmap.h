@@ -5,6 +5,7 @@
 
 static const unsigned MAP_WIDTH = 15;
 static const unsigned MAP_HEIGHT = 15;
+static const unsigned BLOCK_SIZE = 34;
 
 enum BlockType
 {

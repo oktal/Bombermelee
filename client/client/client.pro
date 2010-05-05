@@ -1,3 +1,4 @@
+CONFIG += debug qt console
 INCLUDEPATH += C:\Qt\2010.02.1\mingw\include \
     LIBPATH \
     = \
