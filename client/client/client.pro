@@ -1,4 +1,6 @@
-CONFIG += debug qt console
+CONFIG += debug \
+    qt \
+    console
 INCLUDEPATH += C:\Qt\2010.02.1\mingw\include \
     LIBPATH \
     = \
@@ -18,7 +20,9 @@ HEADERS += cconnect.h \
     Animated.h \
     cplayer.h \
     cmap.h \
-    cimagemanager.h
+    cimagemanager.h \
+    cexplosion.h \
+    cparticle.h
 SOURCES += cconnect.cpp \
     main.cpp \
     QSFMLCanvas.cpp \
@@ -29,6 +33,8 @@ SOURCES += cconnect.cpp \
     Animated.cpp \
     cplayer.cpp \
     cmap.cpp \
-    cimagemanager.cpp
+    cimagemanager.cpp \
+    cparticle.cpp \
+    cexplosion.cpp
 QT += network
 QT += multimedia

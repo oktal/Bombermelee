@@ -8,8 +8,9 @@
 #include <string>
 #include <QHash>
 #include <QTcpSocket>
+#include <QList>
 #include "cimagemanager.h"
-
+#include "cexplosion.h"
 
 static const unsigned WarmupTime = 5; /* 5 seconds before the game begins */
 
@@ -29,7 +30,7 @@ public:
     void setNick(const std::string &nick);
     void newPlayer(const std::string &nick, const std::string &color);
     void playerLeft(const std::string &nick);
-    void playerMove(const std::string &nick, const std::string &move);
+    void playerMove(const std::string &nick, const std::string &move, const float x, const float y);
     void setMap(std::string map);
     void bombExplode(const std::string &bomber, unsigned x, unsigned y);
     void plantedBomb(const std::string &bomber, unsigned x, unsigned y);
@@ -41,6 +42,7 @@ private:
     void OnUpdate();
     void drawMap();
     void drawPlayers();
+    void drawExplosions();
     void drawFPS();
     void drawStatus();
     bool canMove(Direction movement);
@@ -57,6 +59,7 @@ private:
 
 
     QList<CPlayer *> m_playersList;
+    QList<CExplosion *> m_explosionsList;
     QString m_nick;
     QTcpSocket *m_socket;
     QTimer *warmupTimer;
