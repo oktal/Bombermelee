@@ -20,10 +20,12 @@ public:
     void setMoving(bool moving);
     void setColor(const std::string &color);
     void setNick(const std::string &nick);
+    void setStopTime(const float &stopTime);
     void setCorrectPosition();
+    float getStopTime() const;
+    float getElapsedTime() const;
     const std::string &getNick() const;
     Direction getDirection() const;
-    bool isMoving() const;
     bool canMove(Direction direction, CMap &map) const;
     void explode();
     unsigned maxBombs;
@@ -39,7 +41,8 @@ private:
     Anim m_player_right;
     Anim m_player_explode;
     Direction m_direction;
-    bool m_moving;
+    float m_elapsedTime;
+    float m_stopTime;
 };
 
 #endif // CPLAYER_H

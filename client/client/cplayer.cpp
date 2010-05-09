@@ -51,13 +51,14 @@ static inline bool collision(const sf::Sprite& s1,const sf::Sprite& s2, const in
             }
             return false;
         }
-        qDebug() << "Collision";
+        //qDebug() << "Collision";
         return true;
     }
     return false;
 }
 
 CPlayer::CPlayer(const std::string &nick, const std::string &color) :
+        Animated(true, true, 0.2f),
         m_nick(nick)
 {
     setColor(color);
@@ -90,8 +91,9 @@ CPlayer::CPlayer(const std::string &nick, const std::string &color) :
     m_player_explode.PushFrame(Frame(&m_img_player, sf::Rect<int>(209, 2, 232, 25)));
 
     SetAnim(&m_player_right);
-    SetFrameTime(0.2f);
     m_direction = Stopped;
+    m_elapsedTime = 0.0;
+    m_stopTime = 0.0;
 }
 
 /**
@@ -108,45 +110,63 @@ void CPlayer::setDirection(Direction direction)
         {
             SetAnim(&m_player_right);
         }
-        m_moving = true;
         break;
     case Left:
         if (GetAnim() != &m_player_left)
         {
             SetAnim(&m_player_left);
         }
-        m_moving = true;
         break;
     case Up:
         if (GetAnim() != &m_player_up)
         {
             SetAnim(&m_player_up);
         }
-        m_moving = true;
         break;
     case Down:
         if (GetAnim() != &m_player_down)
         {
             SetAnim(&m_player_down);
         }
-        m_moving = true;
         break;
     case Stopped:
-        m_moving = false;
+        /* Reset the elapsedTime */
+        m_elapsedTime = 0.0f;
+        break;
     }
 }
 
-void CPlayer::setMoving(bool moving)
-{
-    m_moving = moving;
-}
-
 /**
+  * Get the current direction
   * @return the current direction
 */
 Direction CPlayer::getDirection() const
 {
     return m_direction;
+}
+
+/**
+  * Get the elapsedTime since last movement
+  * @return the elapsed time
+*/
+
+float CPlayer::getElapsedTime() const
+{
+    return m_elapsedTime;
+}
+
+float CPlayer::getStopTime() const
+{
+    return m_stopTime;
+}
+
+/**
+  * Set the stop time
+*/
+
+void CPlayer::setStopTime(const float &stopTime)
+{
+    m_stopTime = stopTime;
 }
 
 /**
@@ -212,6 +232,7 @@ bool CPlayer::canMove(Direction direction, CMap &map) const
         {
             tmp.SetImage(*imageManager->GetImage("../bomb.png"));
             tmp.SetPosition((x * BLOCK_SIZE) + 6, ((y - 1) * BLOCK_SIZE) + 6);
+            qDebug() << "bomb";
         }
         else if (map.getBlock(x, y - 1) == Floor)
         {
@@ -234,6 +255,7 @@ bool CPlayer::canMove(Direction direction, CMap &map) const
         {
             tmp.SetImage(*imageManager->GetImage("../bomb.png"));
             tmp.SetPosition((x * BLOCK_SIZE) + 6, ((y + 1) * BLOCK_SIZE) + 6);
+            qDebug() << "bomb";
         }
         else if (map.getBlock(x, y + 1) == Floor)
         {
@@ -255,6 +277,7 @@ bool CPlayer::canMove(Direction direction, CMap &map) const
         {
             tmp.SetImage(*imageManager->GetImage("../bomb.png"));
             tmp.SetPosition(((x - 1) * BLOCK_SIZE) + 6, (y * BLOCK_SIZE) + 6);
+            qDebug() << "bomb";
         }
         else if (map.getBlock(x - 1, y) == Floor)
         {
@@ -277,6 +300,7 @@ bool CPlayer::canMove(Direction direction, CMap &map) const
         {
             tmp.SetImage(*imageManager->GetImage("../bomb.png"));
             tmp.SetPosition(((x + 1) * BLOCK_SIZE) + 6, (y * BLOCK_SIZE) + 6);
+            qDebug() << "bomb";
         }
         else if (map.getBlock(x + 1, y) == Floor)
         {
@@ -302,15 +326,19 @@ void CPlayer::move(Direction direction, const float &ElapsedTime)
     {
     case Right:
             Move(Speed * ElapsedTime, 0);
+            m_elapsedTime += ElapsedTime;
             break;
     case Left:
             Move(-Speed * ElapsedTime, 0);
+            m_elapsedTime += ElapsedTime;
             break;
     case Up:
             Move(0, -Speed * ElapsedTime);
+            m_elapsedTime += ElapsedTime;
             break;
     case Down:
             Move(0, Speed * ElapsedTime);
+            m_elapsedTime += ElapsedTime;
             break;
     default:
             break;

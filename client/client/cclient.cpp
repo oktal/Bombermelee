@@ -99,7 +99,10 @@ void CClient::processReadyRead()
     {
         return;
     }
-    m_buffer.clear();
+    while (!m_buffer.isEmpty())
+    {
+        m_buffer.clear();
+    }
     do
     {
         QByteArray c = m_socket->read(1);
@@ -177,6 +180,7 @@ void CClient::readProtocolHeader()
 void CClient::processData()
 {
     QStringList l = QString(m_buffer.data()).split(SeparatorToken);
+    qDebug() << m_buffer.data();
     switch (messageType)
     {
     case Ehlo:
@@ -249,7 +253,11 @@ void CClient::processData()
         }
         break;
     case Move:
-        m_gameBoard->playerMove(l[1].toStdString(), l[2].toStdString());
+        {
+            const float x = strtod(l[3].toStdString().c_str(), NULL);
+            const float y = strtod(l[4].toStdString().c_str(), NULL);
+            m_gameBoard->playerMove(l[1].toStdString(), l[2].toStdString(), x, y);
+        }
         break;
     case Map:
         m_gameBoard->setMap(l[1].toStdString());

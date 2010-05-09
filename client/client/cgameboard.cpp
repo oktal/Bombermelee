@@ -4,6 +4,7 @@
 #include "cimagemanager.h"
 #include <QtGui>
 #include <QtMultimedia>
+#include <QVector>
 
 /*
 This file is part of Bombermelee.
@@ -34,7 +35,6 @@ static inline char const *_m(const std::string &message)
 static void send(QTcpSocket *to, const std::string &what)
 {
     const qint64 len = what.length() + 2;
-    qDebug() << what.c_str();
     while (to->write(_m(what)) != len)
     {
 
@@ -45,13 +45,12 @@ CGameBoard::CGameBoard(QWidget *parent, const QPoint &position, const QSize &siz
         QSFMLCanvas(parent, position, size, FrameTime)
 {
     CPlayer *me = new CPlayer();
-    me->Play();
+    me->setStopTime(0.15f);
     m_playersList.append(me);
     warmupTimer = new QTimer(this);
     m_gameBegin = true;
     m_warmupTime = 0;
     m_status = Waiting_Players;
-
 }
 
 CGameBoard::~CGameBoard()
@@ -92,25 +91,21 @@ void CGameBoard::OnUpdate()
     drawMap();
     drawFPS();
     drawStatus();
+    drawExplosions();
 
     /* Handling Event */
     CPlayer *me = m_playersList[0]; /* I am the first player of the list */
+    std::string pos = QString("%1 %2").arg(me->GetPosition().x).arg(me->GetPosition().y)
+                                      .toStdString();
     if (GetInput().IsKeyDown(sf::Key::Right))
     {
         if (me->canMove(Right, m_map))
         {
             if (me->getDirection() != Right)
             {
-                send(m_socket , "MOVE " + me->getNick() + " RIGHT");
+                send(m_socket , "MOVE " + me->getNick() + " RIGHT " + pos);
                 me->setDirection(Right);
-            }
-         }
-        else
-        {
-            if (me->getDirection() != Stopped)
-            {
-                me->setDirection(Stopped);
-                send(m_socket, "MOVE " + me->getNick() + " STOP");
+                qDebug() << "RIGHT";
             }
         }
         if (me->IsPaused())
@@ -124,17 +119,10 @@ void CGameBoard::OnUpdate()
          {
               if (me->getDirection() != Left)
               {
-                  send(m_socket, "MOVE " + me->getNick() + " LEFT");
                   me->setDirection(Left);
+                  send(m_socket , "MOVE " + me->getNick() + " LEFT " + pos);
+                  qDebug() << "LEFT";
               }
-          }
-         else
-         {
-             if (me->getDirection() != Stopped)
-             {
-                 me->setDirection(Stopped);
-                 send(m_socket, "MOVE " + me->getNick() + " STOP");
-             }
          }
          if (me->IsPaused())
          {
@@ -147,22 +135,16 @@ void CGameBoard::OnUpdate()
          {
               if (me->getDirection() != Down)
               {
-                   send(m_socket, "MOVE " + me->getNick() + " DOWN");
                    me->setDirection(Down);
+                   send(m_socket , "MOVE " + me->getNick() + " DOWN " + pos);
+                   qDebug() << "DOWN";
               }
-          }
-         else
-         {
-             if (me->getDirection() != Stopped)
-             {
-                 me->setDirection(Stopped);
-                 send(m_socket, "MOVE " + me->getNick() + " STOP");
-             }
          }
          if (me->IsPaused())
          {
              me->Play();
          }
+
      }
      else if (GetInput().IsKeyDown(sf::Key::Up))
      {
@@ -170,17 +152,10 @@ void CGameBoard::OnUpdate()
          {
                if (me->getDirection() != Up)
                {
-                    send(m_socket, "MOVE " + me->getNick() + " UP");
+                    send(m_socket, "MOVE " + me->getNick() + " UP " + pos);
                     me->setDirection(Up);
+                    qDebug() << "UP";
                }
-         }
-         else
-         {
-             if (me->getDirection() != Stopped)
-             {
-                 me->setDirection(Stopped);
-                 send(m_socket, "MOVE " + me->getNick() + " STOP");
-             }
          }
          if (me->IsPaused())
          {
@@ -194,12 +169,13 @@ void CGameBoard::OnUpdate()
      }
      else
      {
-         if (me->getDirection() != Stopped)
+         if (me->getDirection() != Stopped && me->getElapsedTime() >= me->getStopTime())
          {
              me->setDirection(Stopped);
-             send(m_socket, "MOVE " + me->getNick() + " STOP");
+             send(m_socket, "MOVE " + me->getNick() + " STOP " + pos);
+             qDebug() << "STOP";
+             me->Pause();
          }
-         me->Pause();
      }
     drawPlayers();
 }
@@ -249,10 +225,32 @@ void CGameBoard::drawPlayers()
         CPlayer *player = m_playersList[i];
         if (player->getDirection() != Stopped)
         {
-            player->move(player->getDirection(), GetFrameTime());
+            if (player->canMove(player->getDirection(), m_map))
+            {
+                player->move(player->getDirection(), GetFrameTime());
+            }
+            player->anim(GetFrameTime());
         }
-        player->anim(GetFrameTime());
         Draw(*player);
+    }
+}
+
+void CGameBoard::drawExplosions()
+{
+    QList<CExplosion *>::iterator it;
+    for (it = m_explosionsList.begin(); it != m_explosionsList.end(); ++it)
+    {
+        QVector<CParticle *> particles = (*it)->getParticles();
+        for (int j = 0; j < particles.size(); j++)
+        {
+            Draw(*particles[j]);
+            particles[j]->anim(GetFrameTime());
+        }
+        if (particles[0]->GetCurrentFrame() == 2)
+        {
+            m_explosionsList.removeOne(*it);
+            delete *it;
+        }
     }
 }
 
@@ -344,6 +342,7 @@ void CGameBoard::bombExplode(const std::string &bomber, unsigned x, unsigned y)
     }
     m_map.setBlock(x, y, Floor);
     QSound::play("../explosion.wav");
+    m_explosionsList.push_back(new CExplosion(x, y));
 }
 
 
@@ -429,7 +428,7 @@ void CGameBoard::playerLeft(const std::string &nick)
     }
 }
 
-void CGameBoard::playerMove(const std::string &nick, const std::string &move)
+void CGameBoard::playerMove(const std::string &nick, const std::string &move, const float x, const float y)
 {
     CPlayer *player = getPlayerFromNick(nick);
     if (move == "LEFT")
@@ -457,6 +456,7 @@ void CGameBoard::playerMove(const std::string &nick, const std::string &move)
         player->setDirection(Stopped);
         player->Stop();
     }
+    player->SetPosition(x, y);
 }
 
 CPlayer *CGameBoard::getPlayerFromNick(const std::string &nick)
