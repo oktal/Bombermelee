@@ -33,11 +33,13 @@ public:
 
     CParticle(ParticleType type, sf::Image explosion);
     ParticleType getType() const;
+    void correctPosition();
 
 private:
     Anim m_anim;
     ParticleType m_type;
     sf::Image m_explosion;
+    int lastFrameCorrected;
 };
 
 #endif // CPARTICLE_H

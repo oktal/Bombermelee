@@ -1,6 +1,10 @@
 #include <QtGui>
 #include "cplayer.h"
 #include "cimagemanager.h"
+#include "cbonus.h"
+#include "climitedbonus.h"
+#include <list>
+#include <iostream>
 
 /*
 This file is part of Bombermelee.
@@ -64,6 +68,7 @@ CPlayer::CPlayer(const std::string &nick, const std::string &color) :
     setColor(color);
     pausedBombs = 0;
     maxBombs = 1; /* 1 bomb maximum at the begining */
+    gotBonus = false; /* No bonus */
 
     /* UP ANIMATION */
     m_player_up.PushFrame(Frame(&m_img_player, sf::Rect<int>(2, 32, 18, 55)));
@@ -94,6 +99,7 @@ CPlayer::CPlayer(const std::string &nick, const std::string &color) :
     m_direction = Stopped;
     m_elapsedTime = 0.0;
     m_stopTime = 0.0;
+    m_speed = Speed;
 }
 
 /**
@@ -160,6 +166,10 @@ float CPlayer::getStopTime() const
     return m_stopTime;
 }
 
+unsigned CPlayer::getSpeed() const
+{
+    return m_speed;
+}
 /**
   * Set the stop time
 */
@@ -207,7 +217,7 @@ const std::string &CPlayer::getNick() const
   * @return true if the player can move, false if not
 */
 
-bool CPlayer::canMove(Direction direction, CMap &map) const
+bool CPlayer::canMove(Direction direction, CMap &map)
 {
     int _x = GetPosition().x, _y = GetPosition().y;
     /* In which block are we ? */
@@ -234,6 +244,14 @@ bool CPlayer::canMove(Direction direction, CMap &map) const
             tmp.SetPosition((x * BLOCK_SIZE) + 6, ((y - 1) * BLOCK_SIZE) + 6);
             qDebug() << "bomb";
         }
+        else if (map.getBlock(x, y - 1) == Bonus)
+        {
+            tmp.SetImage(*imageManager->GetImage("../bonus.png"));
+            tmp.SetPosition((x * BLOCK_SIZE) + 5, ((y - 1) * BLOCK_SIZE) + 5);
+            gotBonus = collision(*this, tmp);
+            return true;
+        }
+
         else if (map.getBlock(x, y - 1) == Floor)
         {
             return true;
@@ -257,6 +275,13 @@ bool CPlayer::canMove(Direction direction, CMap &map) const
             tmp.SetPosition((x * BLOCK_SIZE) + 6, ((y + 1) * BLOCK_SIZE) + 6);
             qDebug() << "bomb";
         }
+        else if (map.getBlock(x, y + 1) == Bonus)
+        {
+            tmp.SetImage(*imageManager->GetImage("../bonus.png"));
+            tmp.SetPosition((x * BLOCK_SIZE) + 5, ((y + 1) * BLOCK_SIZE) + 5);
+            gotBonus = collision(*this, tmp);
+            return true;
+        }
         else if (map.getBlock(x, y + 1) == Floor)
         {
             return true;
@@ -278,6 +303,13 @@ bool CPlayer::canMove(Direction direction, CMap &map) const
             tmp.SetImage(*imageManager->GetImage("../bomb.png"));
             tmp.SetPosition(((x - 1) * BLOCK_SIZE) + 6, (y * BLOCK_SIZE) + 6);
             qDebug() << "bomb";
+        }
+        else if (map.getBlock(x - 1, y) == Bonus)
+        {
+            tmp.SetImage(*imageManager->GetImage("../bonus.png"));
+            tmp.SetPosition(((x - 1) * BLOCK_SIZE) + 5, (y * BLOCK_SIZE) + 5);
+            gotBonus = collision(*this, tmp);
+            return true;
         }
         else if (map.getBlock(x - 1, y) == Floor)
         {
@@ -302,6 +334,13 @@ bool CPlayer::canMove(Direction direction, CMap &map) const
             tmp.SetPosition(((x + 1) * BLOCK_SIZE) + 6, (y * BLOCK_SIZE) + 6);
             qDebug() << "bomb";
         }
+        else if (map.getBlock(x + 1, y) == Bonus)
+        {
+            tmp.SetImage(*imageManager->GetImage("../bonus.png"));
+            tmp.SetPosition(((x + 1) * BLOCK_SIZE) + 5, (y * BLOCK_SIZE) + 5);
+            gotBonus = collision(*this, tmp);
+            return true;
+        }
         else if (map.getBlock(x + 1, y) == Floor)
         {
             return true;
@@ -325,19 +364,19 @@ void CPlayer::move(Direction direction, const float &ElapsedTime)
     switch (direction)
     {
     case Right:
-            Move(Speed * ElapsedTime, 0);
+            Move(m_speed * ElapsedTime, 0);
             m_elapsedTime += ElapsedTime;
             break;
     case Left:
-            Move(-Speed * ElapsedTime, 0);
+            Move(m_speed * -ElapsedTime, 0);
             m_elapsedTime += ElapsedTime;
             break;
     case Up:
-            Move(0, -Speed * ElapsedTime);
+            Move(0, m_speed * -ElapsedTime);
             m_elapsedTime += ElapsedTime;
             break;
     case Down:
-            Move(0, Speed * ElapsedTime);
+            Move(0, m_speed * ElapsedTime);
             m_elapsedTime += ElapsedTime;
             break;
     default:
@@ -381,5 +420,79 @@ void CPlayer::setCorrectPosition()
         /* Bottom right hand corner */
         SetAnim(&m_player_left);
         SetPosition(510 - GetSubRect().GetWidth(), 510 - GetSubRect().GetHeight());
+    }
+}
+
+void CPlayer::newBonus(CBonus *bonus)
+{
+    m_bonusList.push_back(bonus);
+    switch (bonus->getType())
+    {
+    case CBonus::SpeedUp:
+        m_speed *= 2;
+        m_oldStopTime = m_stopTime;
+        m_stopTime = 0.0f;
+        break;
+    case CBonus::SpeedDown:
+        m_speed /= 2;
+        break;
+    case CBonus::BombUp:
+        maxBombs++;
+        break;
+    default:
+        break;
+    }
+}
+
+bool CPlayer::alreadyHasBonus(CBonus::BonusType type)
+{
+    std::list<CBonus *>::iterator it;
+    for (it = m_bonusList.begin(); it != m_bonusList.end(); ++it)
+    {
+        if ((*it)->getType() == type)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+void CPlayer::updateBonusTime(const float &elapsedTime)
+{
+    std::list<CBonus *>::iterator it = m_bonusList.begin();
+    while (it != m_bonusList.end())
+    {
+        /* Let's check if the current bonus is a limited bonus */
+        if ((*it)->getInstanceType() == CBonus::LimitedBonus)
+        {
+            CLimitedBonus *bonus = static_cast<CLimitedBonus *>(*it);
+            /* update the bonus */
+            bonus->updateTime(elapsedTime);
+            if (bonus->isFinished())
+            {
+                switch (bonus->getType())
+                {
+                case CBonus::SpeedUp:
+                    m_stopTime = m_oldStopTime;
+                    m_speed = Speed;
+                    break;
+                case CBonus::SpeedDown:
+                    m_speed = Speed;
+                    break;
+                default:
+                    break;
+                }
+                it = m_bonusList.erase(it);
+                delete bonus;
+            }
+            else
+            {
+                ++it;
+            }
+        }
+        else
+        {
+            ++it;
+        }
     }
 }

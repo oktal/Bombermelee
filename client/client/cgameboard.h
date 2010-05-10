@@ -11,6 +11,7 @@
 #include <QList>
 #include "cimagemanager.h"
 #include "cexplosion.h"
+#include "cbonuscanvas.h"
 
 static const unsigned WarmupTime = 5; /* 5 seconds before the game begins */
 
@@ -45,6 +46,7 @@ private:
     void drawExplosions();
     void drawFPS();
     void drawStatus();
+    void drawBonusCanvas();
     bool canMove(Direction movement);
     void plantBomb();
     CPlayer *getPlayerFromNick(const std::string &nick);
@@ -55,14 +57,13 @@ private:
     sf::Sprite m_bomb;
     sf::Sprite m_bonus;
 
-    QVector<Frame> m_flames;
-
-
     QList<CPlayer *> m_playersList;
     QList<CExplosion *> m_explosionsList;
+    QList<CBonus *> m_bonusList;
     QString m_nick;
     QTcpSocket *m_socket;
     QTimer *warmupTimer;
+    CBonusCanvas *m_bonusCanvas;
     bool m_gameBegin;
     bool m_connected;
     unsigned m_warmupTime;
