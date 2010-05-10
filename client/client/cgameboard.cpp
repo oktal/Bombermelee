@@ -2,9 +2,12 @@
 #include "Animated.h"
 #include "cplayer.h"
 #include "cimagemanager.h"
+#include "cbonus.h"
+#include "climitedbonus.h"
 #include <QtGui>
 #include <QtMultimedia>
 #include <QVector>
+
 
 /*
 This file is part of Bombermelee.
@@ -49,8 +52,21 @@ CGameBoard::CGameBoard(QWidget *parent, const QPoint &position, const QSize &siz
     m_playersList.append(me);
     warmupTimer = new QTimer(this);
     m_gameBegin = true;
+    m_connected = false;
     m_warmupTime = 0;
     m_status = Waiting_Players;
+    m_bonusCanvas = NULL;
+
+    /* TEST */
+    m_map.setBlock(2, 0, Bonus);
+    m_map.setBlock(4, 0, Bonus);
+    m_map.setBlock(5, 2, Bonus);
+    m_map.setBlock(2, 14, Bonus);
+    m_map.setBlock(4, 14, Bonus);
+    m_map.setBlock(5, 12, Bonus);
+    m_map.setBlock(12, 0, Bonus);
+    m_map.setBlock(10, 0, Bonus);
+    m_map.setBlock(9, 2, Bonus);
 }
 
 CGameBoard::~CGameBoard()
@@ -61,6 +77,10 @@ CGameBoard::~CGameBoard()
         CPlayer *player = *it;
         ++it;
         delete player;
+    }
+    if (m_bonusCanvas != NULL)
+    {
+        delete m_bonusCanvas;
     }
 }
 
@@ -92,11 +112,54 @@ void CGameBoard::OnUpdate()
     drawFPS();
     drawStatus();
     drawExplosions();
+    drawPlayers();
+    drawBonusCanvas();
+
+    if (!m_gameBegin || !m_connected)
+    {
+        return;
+    }
 
     /* Handling Event */
     CPlayer *me = m_playersList[0]; /* I am the first player of the list */
     std::string pos = QString("%1 %2").arg(me->GetPosition().x).arg(me->GetPosition().y)
                                       .toStdString();
+    if (me->gotBonus)
+    {
+        unsigned x = (me->GetPosition().x + me->GetSubRect().GetWidth() / 2) / BLOCK_SIZE;
+        unsigned y = (me->GetPosition().y + me->GetSubRect().GetHeight() / 2) / BLOCK_SIZE;
+        m_map.setBlock(x, y, Floor);
+        if (m_bonusCanvas == NULL)
+        {
+            m_bonusCanvas = new CBonusCanvas(0.1f, 4.0f, 545, 340);
+        }
+        else
+        {
+            m_bonusCanvas->Reset();
+            m_bonusCanvas->Play();
+        }
+        qDebug() << "You got a Bonus";
+        me->gotBonus = false;
+        QSound::play("../bonus.wav");
+    }
+
+    sf::Event event;
+    while (GetEvent(event))
+    {
+        switch (event.Type)
+        {
+        case sf::Event::KeyPressed:
+            if (event.Key.Code == sf::Key::Space)
+            {
+                plantBomb();
+            }
+            break;
+        default:
+            break;
+        }
+    }
+
+
     if (GetInput().IsKeyDown(sf::Key::Right))
     {
         if (me->canMove(Right, m_map))
@@ -163,10 +226,6 @@ void CGameBoard::OnUpdate()
          }
 
      }
-     else if (GetInput().IsKeyDown(sf::Key::Space))
-     {
-         plantBomb();
-     }
      else
      {
          if (me->getDirection() != Stopped && me->getElapsedTime() >= me->getStopTime())
@@ -177,7 +236,6 @@ void CGameBoard::OnUpdate()
              me->Pause();
          }
      }
-    drawPlayers();
 }
 
 /**
@@ -200,7 +258,7 @@ void CGameBoard::drawMap()
                 Draw(m_box);
                 break;
             case Bonus:
-                m_bonus.SetPosition(34*i, 34*j);
+                m_bonus.SetPosition((34 * i) + 5, (34 * j) + 5);
                 Draw(m_bonus);
                 break;
             case Floor:
@@ -223,6 +281,7 @@ void CGameBoard::drawPlayers()
     for (int i = 0; i < m_playersList.size(); ++i)
     {
         CPlayer *player = m_playersList[i];
+        player->updateBonusTime(GetFrameTime());
         if (player->getDirection() != Stopped)
         {
             if (player->canMove(player->getDirection(), m_map))
@@ -241,15 +300,17 @@ void CGameBoard::drawExplosions()
     for (it = m_explosionsList.begin(); it != m_explosionsList.end(); ++it)
     {
         QVector<CParticle *> particles = (*it)->getParticles();
-        for (int j = 0; j < particles.size(); j++)
-        {
-            Draw(*particles[j]);
-            particles[j]->anim(GetFrameTime());
-        }
-        if (particles[0]->GetCurrentFrame() == 2)
+        if (particles[0]->GetCurrentFrame() == 3)
         {
             m_explosionsList.removeOne(*it);
             delete *it;
+        }
+
+        for (int j = 0; j < particles.size(); j++)
+        {
+            //particles[j]->correctPosition();
+            Draw(*particles[j]);
+            particles[j]->anim(GetFrameTime());
         }
     }
 }
@@ -303,6 +364,48 @@ void CGameBoard::drawStatus()
     }
 }
 
+void CGameBoard::drawBonusCanvas()
+{
+    if (m_bonusCanvas != NULL)
+    {
+        sf::Shape rect = sf::Shape::Rectangle(
+                m_bonusCanvas->GetPosition().x, m_bonusCanvas->GetPosition().y,
+                m_bonusCanvas->GetPosition().x + 50, m_bonusCanvas->GetPosition().y + 50,
+                sf::Color(127, 127, 127), 1.0f, sf::Color(0, 0, 0));
+        Draw(rect);
+        Draw(*m_bonusCanvas);
+        m_bonusCanvas->playNextBonus(GetFrameTime());
+        if (m_bonusCanvas->isFinished() && !m_bonusCanvas->isPaused())
+        {
+            CBonus bonus = m_bonusCanvas->getBonus();
+            CPlayer *me = m_playersList[0];
+            switch (bonus.getType())
+            {
+            case CBonus::BombDown:
+                break;
+            case CBonus::BombUp:
+                me->newBonus(new CBonus(CBonus::BombUp));
+                break;
+            case CBonus::SpeedDown:
+                if (!me->alreadyHasBonus(CBonus::SpeedDown))
+                {
+                    me->newBonus(new CLimitedBonus(CBonus::SpeedDown, 10.f));
+                }
+                break;
+            case CBonus::SpeedUp:
+                if (!me->alreadyHasBonus(CBonus::SpeedUp))
+                {
+                    me->newBonus(new CLimitedBonus(CBonus::SpeedUp, 10.f));
+                }
+                break;
+            default:
+                break;
+            }
+            m_bonusCanvas->Pause();
+        }
+    }
+}
+
 /**
   Plant a bomb
 */
@@ -312,14 +415,15 @@ void CGameBoard::plantBomb()
     int pos_x = 0, pos_y = 0;
     int x = 0, y = 0;
 
+    qDebug() << me->pausedBombs << " " << me->maxBombs;
     if (me->pausedBombs == me->maxBombs) /* We reached the limit */
     {
         return;
     }
     pos_x = me->GetPosition().x + (me->GetSubRect().GetWidth() / 2);
     pos_y = me->GetPosition().y + (me->GetSubRect().GetHeight() / 2);
-    x = pos_x / 34;
-    y = pos_y / 34;
+    x = pos_x / BLOCK_SIZE;
+    y = pos_y / BLOCK_SIZE;
     m_map.setBlock(x, y, Bomb);
 
     QString pos = QString("%1 %2").arg(x).arg(y);

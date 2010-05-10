@@ -1,5 +1,6 @@
 #include "cexplosion.h"
 #include "cimagemanager.h"
+#include <iostream>
 
 /*
 This file is part of Bombermelee.
@@ -20,8 +21,8 @@ This file is part of Bombermelee.
 
 CExplosion::CExplosion(unsigned x, unsigned y)
 {
-    //CImageManager *imageManager = CImageManager::GetInstance();
-    m_explosion.LoadFromFile("../explosion.png");
+    CImageManager *imageManager = CImageManager::GetInstance();
+    m_explosion = *imageManager->GetImage("../explosion.png");
     m_x = x;
     m_y = y;
 
@@ -30,15 +31,19 @@ CExplosion::CExplosion(unsigned x, unsigned y)
     m_particles.push_back(new CParticle(CParticle::HorizontalLeft, m_explosion));
     m_particles.push_back(new CParticle(CParticle::VerticalUp, m_explosion));
     m_particles.push_back(new CParticle(CParticle::VerticalDown, m_explosion));
+    m_particles.push_back(new CParticle(CParticle::Horizontal, m_explosion));
 
     m_particles[0]->SetPosition(x * BLOCK_SIZE, y * BLOCK_SIZE);
-    m_particles[1]->SetPosition((x + 1) * BLOCK_SIZE, y * BLOCK_SIZE);
+    m_particles[1]->SetPosition((x + 2) * BLOCK_SIZE, y * BLOCK_SIZE);
     m_particles[2]->SetPosition((x - 1) * BLOCK_SIZE, y * BLOCK_SIZE);
     m_particles[3]->SetPosition(x * BLOCK_SIZE, (y - 1) * BLOCK_SIZE);
     m_particles[4]->SetPosition(x * BLOCK_SIZE, (y + 1) * BLOCK_SIZE);
+    m_particles[5]->SetPosition((x + 1) * BLOCK_SIZE, y * BLOCK_SIZE);
+
 }
 
 QVector<CParticle *> CExplosion::getParticles() const
 {
     return m_particles;
 }
+
