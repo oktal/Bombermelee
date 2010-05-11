@@ -7,7 +7,7 @@
 #include <QtGui>
 #include <QtMultimedia>
 #include <QVector>
-
+#include <cassert>
 
 /*
 This file is part of Bombermelee.
@@ -126,8 +126,8 @@ void CGameBoard::OnUpdate()
                                       .toStdString();
     if (me->gotBonus)
     {
-        unsigned x = (me->GetPosition().x + me->GetSubRect().GetWidth() / 2) / BLOCK_SIZE;
-        unsigned y = (me->GetPosition().y + me->GetSubRect().GetHeight() / 2) / BLOCK_SIZE;
+        unsigned x = me->getX();
+        unsigned y = me->getY();
         m_map.setBlock(x, y, Floor);
         if (m_bonusCanvas == NULL)
         {
@@ -282,6 +282,15 @@ void CGameBoard::drawPlayers()
     {
         CPlayer *player = m_playersList[i];
         player->updateBonusTime(GetFrameTime());
+        if (player->gotBonus && i != 0)
+        {
+            unsigned x = player->getX();
+            unsigned y = player->getY();
+            m_map.setBlock(x, y, Floor);
+            QSound::play("../bonus.wav");
+            player->gotBonus = false;
+        }
+
         if (player->getDirection() != Stopped)
         {
             if (player->canMove(player->getDirection(), m_map))
@@ -385,17 +394,20 @@ void CGameBoard::drawBonusCanvas()
                 break;
             case CBonus::BombUp:
                 me->newBonus(new CBonus(CBonus::BombUp));
+                send(m_socket, "BONUS " + me->getNick() + " BOMBUP");
                 break;
             case CBonus::SpeedDown:
                 if (!me->alreadyHasBonus(CBonus::SpeedDown))
                 {
                     me->newBonus(new CLimitedBonus(CBonus::SpeedDown, 10.f));
+                    send(m_socket, "BONUS " + me->getNick() + " SPEEDDOWN");
                 }
                 break;
             case CBonus::SpeedUp:
                 if (!me->alreadyHasBonus(CBonus::SpeedUp))
                 {
                     me->newBonus(new CLimitedBonus(CBonus::SpeedUp, 10.f));
+                    send(m_socket, "BONUS " + me->getNick() + " SPEEDUP");
                 }
                 break;
             default:
@@ -535,6 +547,7 @@ void CGameBoard::playerLeft(const std::string &nick)
 void CGameBoard::playerMove(const std::string &nick, const std::string &move, const float x, const float y)
 {
     CPlayer *player = getPlayerFromNick(nick);
+    assert(player != NULL);
     if (move == "LEFT")
     {
         player->setDirection(Left);
@@ -561,6 +574,25 @@ void CGameBoard::playerMove(const std::string &nick, const std::string &move, co
         player->Stop();
     }
     player->SetPosition(x, y);
+}
+
+void CGameBoard::playerGotBonus(const std::string &nick, const std::string &bonus)
+{
+    CPlayer *player = getPlayerFromNick(nick);
+    assert(player != NULL);
+
+    if (bonus == "SPEEDUP")
+    {
+        player->newBonus(new CLimitedBonus(CBonus::SpeedUp, 10.0f));
+    }
+    else if (bonus == "SPEEDDOWN")
+    {
+        player->newBonus(new CLimitedBonus(CBonus::SpeedDown, 10.0f));
+    }
+    else if (bonus == "BOMBUP")
+    {
+        player->newBonus(new CBonus(CBonus::BombUp));
+    }
 }
 
 CPlayer *CGameBoard::getPlayerFromNick(const std::string &nick)

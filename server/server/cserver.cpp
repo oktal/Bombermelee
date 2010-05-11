@@ -198,6 +198,10 @@ void CServer::readProtocolHeader()
     {
         messageType = Bomb;
     }
+    else if (l[0] == "BONUS")
+    {
+        messageType = Bonus;
+    }
     else
     {
         messageType = Undefined;
@@ -265,6 +269,9 @@ void CServer::processData(QTcpSocket *sender)
             QObject::connect(bomb, SIGNAL(explode()), this, SLOT(bombExplode()));
             broadcast(QString(m_buffer.data()), sender);
         }
+        break;
+    case Bonus:
+        broadcast(QString(m_buffer.data()), sender);
         break;
     case Pong:
     case Undefined:

@@ -175,6 +175,10 @@ void CClient::readProtocolHeader()
     {
         messageType = Boom;
     }
+    else if (l[0] == "BONUS")
+    {
+        messageType = Bonus;
+    }
 }
 
 void CClient::processData()
@@ -274,6 +278,26 @@ void CClient::processData()
             unsigned x = strtol(l[2].toStdString().c_str(), NULL, 10);
             unsigned y = strtol(l[3].toStdString().c_str(), NULL, 10);
             m_gameBoard->bombExplode(l[1].toStdString(), x, y);
+        }
+        break;
+    case Bonus:
+        m_gameBoard->playerGotBonus(l[1].toStdString(), l[2].toStdString());
+        {
+            QString type = "";
+            if (l[2] == "SPEEDUP")
+            {
+                type = "Bonus";
+            }
+            else if (l[2] == "SPEEDDOWN")
+            {
+                type = "Malus";
+            }
+            else if (l[2] == "BOMBUP")
+            {
+                type = "Bonus";
+            }
+            appendToChatBox(tr("<font color='blue'><em>%1 has got <strong>%2</strong> %3</em></font>")
+                            .arg(l[1]).arg(l[2]).arg(type));
         }
         break;
     default:

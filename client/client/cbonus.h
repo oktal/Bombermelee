@@ -19,14 +19,9 @@ public:
         SpeedUp, SpeedDown
     };
 
-    enum BonusInstanceType
-    {
-        NormalBonus, LimitedBonus
-    };
-
     CBonus(BonusType type);
+    virtual ~CBonus();
     BonusType getType() const;
-    virtual BonusInstanceType getInstanceType() const;
 
 private:
     BonusType m_type;

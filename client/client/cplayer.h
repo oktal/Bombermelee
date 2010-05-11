@@ -34,6 +34,8 @@ public:
     void newBonus(CBonus *bonus);
     void updateBonusTime(const float &elapsedTime);
     bool alreadyHasBonus(CBonus::BonusType type);
+    unsigned getX() const;
+    unsigned getY() const;
 
     unsigned maxBombs;
     unsigned pausedBombs;
