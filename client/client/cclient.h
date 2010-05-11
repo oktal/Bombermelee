@@ -26,6 +26,7 @@ public:
         Map,
         Boom, /* A bomb explode */
         Bomb,
+        Bonus,
         /* For future */
         Ping /* Ping Request */
     };

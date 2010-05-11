@@ -21,8 +21,3 @@ void CLimitedBonus::updateTime(const float &elapsedTime)
         m_finished = true;
     }
 }
-
-CBonus::BonusInstanceType CLimitedBonus::getInstanceType() const
-{
-    return LimitedBonus;
-}

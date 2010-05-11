@@ -32,6 +32,7 @@ public:
     void newPlayer(const std::string &nick, const std::string &color);
     void playerLeft(const std::string &nick);
     void playerMove(const std::string &nick, const std::string &move, const float x, const float y);
+    void playerGotBonus(const std::string &nick, const std::string &bonus);
     void setMap(std::string map);
     void bombExplode(const std::string &bomber, unsigned x, unsigned y);
     void plantedBomb(const std::string &bomber, unsigned x, unsigned y);

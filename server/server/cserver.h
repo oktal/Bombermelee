@@ -23,6 +23,7 @@ public:
         Say,
         Move, /* Player MOVE */
         Bomb, /* Player plants a BOMB */
+        Bonus, /* Player got a BONUS */
         /* For future */
         Pong /* Pong Answer */
     };

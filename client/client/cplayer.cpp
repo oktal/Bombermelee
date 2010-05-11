@@ -5,6 +5,7 @@
 #include "climitedbonus.h"
 #include <list>
 #include <iostream>
+#include <typeinfo>
 
 /*
 This file is part of Bombermelee.
@@ -100,6 +101,16 @@ CPlayer::CPlayer(const std::string &nick, const std::string &color) :
     m_elapsedTime = 0.0;
     m_stopTime = 0.0;
     m_speed = Speed;
+}
+
+unsigned CPlayer::getX() const
+{
+    return (GetPosition().x + GetSubRect().GetWidth() / 2) / BLOCK_SIZE;
+}
+
+unsigned CPlayer::getY() const
+{
+    return (GetPosition().y + GetSubRect().GetHeight() / 2) / BLOCK_SIZE;
 }
 
 /**
@@ -242,13 +253,12 @@ bool CPlayer::canMove(Direction direction, CMap &map)
         {
             tmp.SetImage(*imageManager->GetImage("../bomb.png"));
             tmp.SetPosition((x * BLOCK_SIZE) + 6, ((y - 1) * BLOCK_SIZE) + 6);
-            qDebug() << "bomb";
         }
-        else if (map.getBlock(x, y - 1) == Bonus)
+        else if (map.getBlock(x, y) == Bonus)
         {
             tmp.SetImage(*imageManager->GetImage("../bonus.png"));
-            tmp.SetPosition((x * BLOCK_SIZE) + 5, ((y - 1) * BLOCK_SIZE) + 5);
-            gotBonus = collision(*this, tmp);
+            tmp.SetPosition((x * BLOCK_SIZE) + 5, ((y) * BLOCK_SIZE) + 5);
+            gotBonus = collision(*this, tmp, 0);
             return true;
         }
 
@@ -273,13 +283,12 @@ bool CPlayer::canMove(Direction direction, CMap &map)
         {
             tmp.SetImage(*imageManager->GetImage("../bomb.png"));
             tmp.SetPosition((x * BLOCK_SIZE) + 6, ((y + 1) * BLOCK_SIZE) + 6);
-            qDebug() << "bomb";
         }
-        else if (map.getBlock(x, y + 1) == Bonus)
+        else if (map.getBlock(x, y) == Bonus)
         {
             tmp.SetImage(*imageManager->GetImage("../bonus.png"));
-            tmp.SetPosition((x * BLOCK_SIZE) + 5, ((y + 1) * BLOCK_SIZE) + 5);
-            gotBonus = collision(*this, tmp);
+            tmp.SetPosition((x * BLOCK_SIZE) + 5, ((y) * BLOCK_SIZE) + 5);
+            gotBonus = collision(*this, tmp, 0);
             return true;
         }
         else if (map.getBlock(x, y + 1) == Floor)
@@ -302,13 +311,12 @@ bool CPlayer::canMove(Direction direction, CMap &map)
         {
             tmp.SetImage(*imageManager->GetImage("../bomb.png"));
             tmp.SetPosition(((x - 1) * BLOCK_SIZE) + 6, (y * BLOCK_SIZE) + 6);
-            qDebug() << "bomb";
         }
-        else if (map.getBlock(x - 1, y) == Bonus)
+        else if (map.getBlock(x, y) == Bonus)
         {
             tmp.SetImage(*imageManager->GetImage("../bonus.png"));
-            tmp.SetPosition(((x - 1) * BLOCK_SIZE) + 5, (y * BLOCK_SIZE) + 5);
-            gotBonus = collision(*this, tmp);
+            tmp.SetPosition(((x) * BLOCK_SIZE) + 5, (y * BLOCK_SIZE) + 5);
+            gotBonus = collision(*this, tmp, 0);
             return true;
         }
         else if (map.getBlock(x - 1, y) == Floor)
@@ -332,13 +340,12 @@ bool CPlayer::canMove(Direction direction, CMap &map)
         {
             tmp.SetImage(*imageManager->GetImage("../bomb.png"));
             tmp.SetPosition(((x + 1) * BLOCK_SIZE) + 6, (y * BLOCK_SIZE) + 6);
-            qDebug() << "bomb";
         }
-        else if (map.getBlock(x + 1, y) == Bonus)
+        else if (map.getBlock(x, y) == Bonus)
         {
             tmp.SetImage(*imageManager->GetImage("../bonus.png"));
-            tmp.SetPosition(((x + 1) * BLOCK_SIZE) + 5, (y * BLOCK_SIZE) + 5);
-            gotBonus = collision(*this, tmp);
+            tmp.SetPosition(((x) * BLOCK_SIZE) + 5, (y * BLOCK_SIZE) + 5);
+            gotBonus = collision(*this, tmp, 0);
             return true;
         }
         else if (map.getBlock(x + 1, y) == Floor)
@@ -437,7 +444,10 @@ void CPlayer::newBonus(CBonus *bonus)
         m_speed /= 2;
         break;
     case CBonus::BombUp:
-        maxBombs++;
+        if (maxBombs < MaxBombs)
+        {
+            maxBombs++;
+        }
         break;
     default:
         break;
@@ -463,7 +473,7 @@ void CPlayer::updateBonusTime(const float &elapsedTime)
     while (it != m_bonusList.end())
     {
         /* Let's check if the current bonus is a limited bonus */
-        if ((*it)->getInstanceType() == CBonus::LimitedBonus)
+        if (dynamic_cast<CLimitedBonus *>(*it))
         {
             CLimitedBonus *bonus = static_cast<CLimitedBonus *>(*it);
             /* update the bonus */
