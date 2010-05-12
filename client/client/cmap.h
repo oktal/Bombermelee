@@ -1,7 +1,7 @@
-#include <string>
-
 #ifndef CMAP_H
 #define CMAP_H
+
+#include <string>
 
 static const unsigned MAP_WIDTH = 15;
 static const unsigned MAP_HEIGHT = 15;
@@ -12,6 +12,7 @@ enum BlockType
     Wall = 1,
     Box,
     Floor,
+    BonusBox,
     Bonus,
     Bomb,
     Player

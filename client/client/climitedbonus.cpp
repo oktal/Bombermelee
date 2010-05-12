@@ -21,3 +21,8 @@ void CLimitedBonus::updateTime(const float &elapsedTime)
         m_finished = true;
     }
 }
+
+float CLimitedBonus::getRemainingTime() const
+{
+    return m_time - m_elapsedTime;
+}
