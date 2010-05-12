@@ -8,6 +8,7 @@
 #include <QtMultimedia>
 #include <QVector>
 #include <cassert>
+#include <ctime>
 
 /*
 This file is part of Bombermelee.
@@ -67,6 +68,7 @@ CGameBoard::CGameBoard(QWidget *parent, const QPoint &position, const QSize &siz
     m_map.setBlock(12, 0, Bonus);
     m_map.setBlock(10, 0, Bonus);
     m_map.setBlock(9, 2, Bonus);
+    srand(time(NULL));
 }
 
 CGameBoard::~CGameBoard()
@@ -131,7 +133,7 @@ void CGameBoard::OnUpdate()
         m_map.setBlock(x, y, Floor);
         if (m_bonusCanvas == NULL)
         {
-            m_bonusCanvas = new CBonusCanvas(0.1f, 4.0f, 545, 340);
+            m_bonusCanvas = new CBonusCanvas(0.1f, 4.0f, sf::Rect<int>(535, 320,605, 390));
         }
         else
         {
@@ -254,6 +256,7 @@ void CGameBoard::drawMap()
                 Draw(m_wall);
                 break;
             case Box:
+            case BonusBox:
                 m_box.SetPosition(34*i, 34*j);
                 Draw(m_box);
                 break;
@@ -309,7 +312,8 @@ void CGameBoard::drawExplosions()
     for (it = m_explosionsList.begin(); it != m_explosionsList.end(); ++it)
     {
         QVector<CParticle *> particles = (*it)->getParticles();
-        if (particles[0]->GetCurrentFrame() == 3)
+        if (static_cast<unsigned>(particles[0]->GetCurrentFrame()) ==
+                particles[0]->GetAnim()->Size() - 1)
         {
             m_explosionsList.removeOne(*it);
             delete *it;
@@ -317,7 +321,16 @@ void CGameBoard::drawExplosions()
 
         for (int j = 0; j < particles.size(); j++)
         {
-            //particles[j]->correctPosition();
+            unsigned x = particles[j]->getX();
+            unsigned y = particles[j]->getY();
+            if (m_map.getBlock(x, y) == Box)
+            {
+                m_map.setBlock(x, y, Floor);
+            }
+            else if (m_map.getBlock(x, y) == BonusBox)
+            {
+                m_map.setBlock(x, y, Bonus);
+            }
             Draw(*particles[j]);
             particles[j]->anim(GetFrameTime());
         }
@@ -377,11 +390,24 @@ void CGameBoard::drawBonusCanvas()
 {
     if (m_bonusCanvas != NULL)
     {
-        sf::Shape rect = sf::Shape::Rectangle(
-                m_bonusCanvas->GetPosition().x, m_bonusCanvas->GetPosition().y,
-                m_bonusCanvas->GetPosition().x + 50, m_bonusCanvas->GetPosition().y + 50,
+        sf::Shape header = sf::Shape::Rectangle(
+                m_bonusCanvas->getCanvasPosition().Left, m_bonusCanvas->getCanvasPosition().Top - 20,
+                m_bonusCanvas->getCanvasPosition().Right, m_bonusCanvas->getCanvasPosition().Bottom - 20,
                 sf::Color(127, 127, 127), 1.0f, sf::Color(0, 0, 0));
-        Draw(rect);
+        Draw(header);
+        sf::String bonusName;
+        bonusName.SetText(m_bonusCanvas->getBonus().toString());
+        bonusName.SetSize(11.0f);
+        bonusName.SetColor(sf::Color(255, 255, 255));
+        bonusName.SetPosition(m_bonusCanvas->getCanvasPosition().Left + 5,
+                              m_bonusCanvas->getCanvasPosition().Top - 17);
+        Draw(bonusName);
+
+        sf::Shape canvas = sf::Shape::Rectangle(
+                m_bonusCanvas->getCanvasPosition().Left, m_bonusCanvas->getCanvasPosition().Top,
+                m_bonusCanvas->getCanvasPosition().Right, m_bonusCanvas->getCanvasPosition().Bottom,
+                sf::Color(127, 127, 127), 1.0f, sf::Color(0, 0, 0));
+        Draw(canvas);
         Draw(*m_bonusCanvas);
         m_bonusCanvas->playNextBonus(GetFrameTime());
         if (m_bonusCanvas->isFinished() && !m_bonusCanvas->isPaused())
@@ -424,18 +450,15 @@ void CGameBoard::drawBonusCanvas()
 void CGameBoard::plantBomb()
 {
     CPlayer *me = m_playersList[0];
-    int pos_x = 0, pos_y = 0;
-    int x = 0, y = 0;
+    unsigned x = 0, y = 0;
 
     qDebug() << me->pausedBombs << " " << me->maxBombs;
     if (me->pausedBombs == me->maxBombs) /* We reached the limit */
     {
         return;
     }
-    pos_x = me->GetPosition().x + (me->GetSubRect().GetWidth() / 2);
-    pos_y = me->GetPosition().y + (me->GetSubRect().GetHeight() / 2);
-    x = pos_x / BLOCK_SIZE;
-    y = pos_y / BLOCK_SIZE;
+    x = me->getX();
+    y = me->getY();
     m_map.setBlock(x, y, Bomb);
 
     QString pos = QString("%1 %2").arg(x).arg(y);

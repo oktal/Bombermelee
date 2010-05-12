@@ -31,15 +31,17 @@ public:
         Horizontal, Vertical
     };
 
-    CParticle(ParticleType type, sf::Image explosion);
+    CParticle(ParticleType type, unsigned x, unsigned y, sf::Image explosion);
     ParticleType getType() const;
-    void correctPosition();
+    unsigned getX() const;
+    unsigned getY() const;
 
 private:
     Anim m_anim;
     ParticleType m_type;
     sf::Image m_explosion;
-    int lastFrameCorrected;
+    unsigned m_x;
+    unsigned m_y;
 };
 
 #endif // CPARTICLE_H

@@ -82,7 +82,7 @@ void CMap::setMap(const std::string &map)
                m_map[x][y] = Floor;
                 break;
             case '+':
-                m_map[x][y] = Bonus;
+                m_map[x][y] = BonusBox;
                 break;
             case 'P':
                 m_map[x][y] = Player;

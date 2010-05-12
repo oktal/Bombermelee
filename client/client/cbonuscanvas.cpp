@@ -1,13 +1,20 @@
 #include "cbonuscanvas.h"
 #include "cimagemanager.h"
 #include <algorithm>
+#include <ctime>
 
-CBonusCanvas::CBonusCanvas(float time, float timeToLeave, float x, float y)
+CBonusCanvas::CBonusCanvas(float time, float timeToLeave, sf::Rect<int> position)
 {
+    m_bonusList.push_back(new CBonus(CBonus::SpeedUp));
     m_bonusList.push_back(new CBonus(CBonus::SpeedUp));
     m_bonusList.push_back(new CBonus(CBonus::SpeedDown));
     m_bonusList.push_back(new CBonus(CBonus::BombUp));
-    //m_bonusList.push_back(new CBonus(CBonus::BombDown));
+    m_bonusList.push_back(new CBonus(CBonus::BombUp));
+    m_bonusList.push_back(new CBonus(CBonus::BombUp));
+    m_bonusList.push_back(new CBonus(CBonus::BombDown));
+    m_bonusList.push_back(new CBonus(CBonus::FireUp));
+    m_bonusList.push_back(new CBonus(CBonus::FireUp));
+    m_bonusList.push_back(new CBonus(CBonus::FireDown));
 
     std::random_shuffle(m_bonusList.begin(), m_bonusList.end());
 
@@ -18,8 +25,8 @@ CBonusCanvas::CBonusCanvas(float time, float timeToLeave, float x, float y)
     m_currentBonus = 0;
     m_finished = false;
     m_paused = false;
-    SetPosition(x, y);
-
+    SetPosition(position.Left, position.Top);
+    m_position = position;
 }
 
 void CBonusCanvas::setBonusImage()
@@ -28,19 +35,22 @@ void CBonusCanvas::setBonusImage()
     switch (m_bonusList[m_currentBonus]->getType())
     {
     case CBonus::BombDown:
+        SetImage(*imageManager->GetImage("../bomb_down70.png"));
         break;
     case CBonus::BombUp:
-        SetImage(*imageManager->GetImage("../bomb_up50.png"));
+        SetImage(*imageManager->GetImage("../bomb_up70.png"));
         break;
     case CBonus::SpeedDown:
-        SetImage(*imageManager->GetImage("../speed_down50.png"));
+        SetImage(*imageManager->GetImage("../speed_down70.png"));
         break;
     case CBonus::SpeedUp:
-        SetImage(*imageManager->GetImage("../speed_up50.png"));
+        SetImage(*imageManager->GetImage("../speed_up70.png"));
         break;
     case CBonus::FireDown:
+        SetImage(*imageManager->GetImage("../fire_down70.png"));
         break;
     case CBonus::FireUp:
+        SetImage(*imageManager->GetImage("../fire_up70.png"));
         break;
     case CBonus::FullFire:
         break;
@@ -50,6 +60,11 @@ void CBonusCanvas::setBonusImage()
 CBonus CBonusCanvas::getBonus() const
 {
     return *m_bonusList[m_currentBonus];
+}
+
+sf::Rect<int> CBonusCanvas::getCanvasPosition() const
+{
+    return m_position;
 }
 
 bool CBonusCanvas::isFinished() const
@@ -78,11 +93,13 @@ void CBonusCanvas::playNextBonus(const float &elapsedTime)
     else if (m_elapsedTime >= m_time)
     {
         m_elapsedTime = 0.0;
-        ++m_currentBonus;
-        if (m_currentBonus == static_cast<unsigned>(m_bonusList.size()))
+        unsigned bonus;
+        do
         {
-            m_currentBonus = 0;
-        }
+            bonus = rand() % m_bonusList.size();
+        } while (bonus == m_currentBonus ||
+                 m_bonusList[bonus]->getType() == m_bonusList[m_currentBonus]->getType());
+        m_currentBonus = bonus;
         setBonusImage();
     }
 }

@@ -14,6 +14,7 @@ public:
     CLimitedBonus(BonusType type, float time);
     bool isFinished() const;
     void updateTime(const float &elapsedTime);
+    float getRemainingTime() const;
 
 private:
     float m_time;

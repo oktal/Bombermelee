@@ -20,7 +20,7 @@ This file is part of Bombermelee.
     along with Bombermelee.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-CParticle::CParticle(ParticleType type, sf::Image explosion) :
+CParticle::CParticle(ParticleType type, unsigned x, unsigned y, sf::Image explosion) :
         Animated(true, true, 0.05f)
 {
     m_explosion = explosion;
@@ -70,7 +70,9 @@ CParticle::CParticle(ParticleType type, sf::Image explosion) :
     }
     SetAnim(&m_anim);
     m_type = type;
-    lastFrameCorrected = -1;
+    SetPosition(x * BLOCK_SIZE, y * BLOCK_SIZE);
+    m_x = x;
+    m_y = y;
 }
 
 CParticle::ParticleType CParticle::getType() const
@@ -78,43 +80,12 @@ CParticle::ParticleType CParticle::getType() const
     return m_type;
 }
 
-void CParticle::correctPosition()
+unsigned CParticle::getX() const
 {
-    unsigned width = GetSubRect().GetWidth();
-    unsigned height = GetSubRect().GetHeight();
-    switch (m_type)
-    {
-    case HorizontalLeft:
-        if (width < BLOCK_SIZE && lastFrameCorrected != GetCurrentFrame())
-        {
-            Move(BLOCK_SIZE - width, 0);
-            lastFrameCorrected = GetCurrentFrame();
-        }
-        break;
-    case HorizontalRight:
-        if (width < BLOCK_SIZE && lastFrameCorrected != GetCurrentFrame())
-        {
-            Move(-(BLOCK_SIZE - width), 0);
-            lastFrameCorrected = GetCurrentFrame();
+    return m_x;
 }
-        break;
-    case VerticalUp:
-        if (height < BLOCK_SIZE && lastFrameCorrected != GetCurrentFrame())
-        {
-            Move(0, BLOCK_SIZE - height);
-            lastFrameCorrected = GetCurrentFrame();
-        }
-        break;
-    case VerticalDown:
-        if (height < BLOCK_SIZE && lastFrameCorrected != GetCurrentFrame())
-        {
-            Move(0, (-BLOCK_SIZE - height));
-            lastFrameCorrected = GetCurrentFrame();
-        }
-        break;
-    case Horizontal:
-    case Vertical:
-    case Middle:
-        break;
-    }
+
+unsigned CParticle::getY() const
+{
+    return m_y;
 }

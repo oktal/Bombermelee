@@ -244,7 +244,8 @@ bool CPlayer::canMove(Direction direction, CMap &map)
             return false;
         }
         if (map.getBlock(x, y - 1) == Wall ||
-            map.getBlock(x, y - 1) == Box)
+            map.getBlock(x, y - 1) == Box ||
+            map.getBlock(x, y - 1) == BonusBox)
         {
             tmp.SetImage(*imageManager->GetImage("../mur.png"));
             tmp.SetPosition(x * BLOCK_SIZE, (y - 1) * BLOCK_SIZE);
@@ -274,7 +275,8 @@ bool CPlayer::canMove(Direction direction, CMap &map)
             return false;
         }
         if (map.getBlock(x, y + 1) == Wall ||
-            map.getBlock(x, y + 1) == Box)
+            map.getBlock(x, y + 1) == Box ||
+            map.getBlock(x, y + 1) == BonusBox)
         {
             tmp.SetImage(*imageManager->GetImage("../mur.png"));
             tmp.SetPosition(x * BLOCK_SIZE, (y + 1) * BLOCK_SIZE);
@@ -302,7 +304,8 @@ bool CPlayer::canMove(Direction direction, CMap &map)
             return false;
         }
         if (map.getBlock(x - 1, y) == Wall ||
-            map.getBlock(x - 1, y) == Box)
+            map.getBlock(x - 1, y) == Box ||
+            map.getBlock(x - 1, y) == BonusBox)
         {
             tmp.SetImage(*imageManager->GetImage("../mur.png"));
             tmp.SetPosition((x - 1) * BLOCK_SIZE, y * BLOCK_SIZE);
@@ -331,7 +334,8 @@ bool CPlayer::canMove(Direction direction, CMap &map)
             return false;
         }
         if (map.getBlock(x + 1, y) == Wall ||
-            map.getBlock(x + 1, y) == Box)
+            map.getBlock(x + 1, y) == Box ||
+            map.getBlock(x + 1, y) == BonusBox)
         {
             tmp.SetImage(*imageManager->GetImage("../mur.png"));
             tmp.SetPosition((x + 1) * BLOCK_SIZE, y * BLOCK_SIZE);
@@ -465,6 +469,11 @@ bool CPlayer::alreadyHasBonus(CBonus::BonusType type)
         }
     }
     return false;
+}
+
+CBonus *CPlayer::getLastBonus() const
+{
+    return m_bonusList.back();
 }
 
 void CPlayer::updateBonusTime(const float &elapsedTime)

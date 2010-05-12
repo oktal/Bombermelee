@@ -22,6 +22,7 @@ public:
     CBonus(BonusType type);
     virtual ~CBonus();
     BonusType getType() const;
+    std::string toString() const;
 
 private:
     BonusType m_type;

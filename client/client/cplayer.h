@@ -31,11 +31,12 @@ public:
     Direction getDirection() const;
     bool canMove(Direction direction, CMap &map);
     void explode();
-    void newBonus(CBonus *bonus);
     void updateBonusTime(const float &elapsedTime);
     bool alreadyHasBonus(CBonus::BonusType type);
     unsigned getX() const;
     unsigned getY() const;
+    void newBonus(CBonus *bonus);
+    CBonus *getLastBonus() const;
 
     unsigned maxBombs;
     unsigned pausedBombs;

@@ -8,7 +8,7 @@
 class CBonusCanvas : public sf::Sprite
 {
 public:
-    CBonusCanvas(float time, float timeToLeave, float x, float y);
+    CBonusCanvas(float time, float timeToLeave, sf::Rect<int> position);
     void playNextBonus(const float &elapsedTime);
     CBonus getBonus() const;
     bool isFinished() const;
@@ -16,6 +16,7 @@ public:
     void Pause();
     void Play();
     bool isPaused() const;
+    sf::Rect<int> getCanvasPosition() const;
 
 private:
     QList<CBonus *> m_bonusList;
@@ -26,6 +27,7 @@ private:
     unsigned m_currentBonus;
     bool m_finished;
     bool m_paused;
+    sf::Rect<int> m_position;
 
     void setBonusImage();
 };
