@@ -476,7 +476,10 @@ void CPlayer::removeBonus(CBonus::BonusType type)
             delete bonus;
             //break;
         }
-        ++it;
+        else
+        {
+            ++it;
+        }
     }
 }
 

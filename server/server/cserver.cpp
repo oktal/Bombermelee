@@ -202,6 +202,10 @@ void CServer::readProtocolHeader()
     {
         messageType = Bonus;
     }
+    else if (l[0] == "BOOM")
+    {
+        messageType = Boom;
+    }
     else
     {
         messageType = Undefined;
@@ -264,7 +268,16 @@ void CServer::processData(QTcpSocket *sender)
         {
             unsigned x = strtol(l[2].toStdString().c_str(), NULL, 10);
             unsigned y = strtol(l[3].toStdString().c_str(), NULL, 10);
-            CBomb *bomb = new CBomb(l[1], x, y);
+            QString type = l[4];
+            CBomb *bomb;
+            if (l[4] == "NORMAL")
+            {
+                bomb = new CBomb(l[1], x, y, ExplodeTime);
+            }
+            else
+            {
+                bomb = new CBomb(l[1], x, y, ExplodeTimeRemote);
+            }
             m_bombsList.enqueue(bomb);
             QObject::connect(bomb, SIGNAL(explode()), this, SLOT(bombExplode()));
             broadcast(QString(m_buffer.data()), sender);
@@ -272,6 +285,23 @@ void CServer::processData(QTcpSocket *sender)
         break;
     case Bonus:
         broadcast(QString(m_buffer.data()), sender);
+        break;
+    case Boom:
+        broadcast(QString(m_buffer.data()), sender);
+        {
+            unsigned x = strtol(l[2].toStdString().c_str(), NULL, 10);
+            unsigned y = strtol(l[3].toStdString().c_str(), NULL, 10);
+            for (int i = 0; i < m_bombsList.size(); ++i)
+            {
+                CBomb *bomb = m_bombsList[i];
+                if (bomb->x == x && bomb->y == y)
+                {
+                    bomb->stopTimer();
+                    m_bombsList.removeAt(i);
+                    break;
+                }
+            }
+        }
         break;
     case Pong:
     case Undefined:

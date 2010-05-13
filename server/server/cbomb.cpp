@@ -5,10 +5,10 @@ CBomb::CBomb()
 
 }
 
-CBomb::CBomb(const QString &bomber, unsigned x, unsigned y)
+CBomb::CBomb(const QString &bomber, unsigned x, unsigned y, unsigned explodeTime)
 {
     m_timer = new QTimer(this);
-    m_timer->setInterval(ExplodeTime);
+    m_timer->setInterval(explodeTime);
     m_timer->start();
     QObject::connect(m_timer, SIGNAL(timeout()), this, SLOT(bombExplode()));
 
@@ -21,4 +21,9 @@ CBomb::CBomb(const QString &bomber, unsigned x, unsigned y)
 void CBomb::bombExplode()
 {
     emit explode();
+}
+
+void CBomb::stopTimer()
+{
+    m_timer->stop();
 }
