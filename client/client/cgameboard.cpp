@@ -402,7 +402,6 @@ void CGameBoard::drawBonusCanvas()
         bonusName.SetPosition(m_bonusCanvas->getCanvasPosition().Left + 5,
                               m_bonusCanvas->getCanvasPosition().Top - 17);
         Draw(bonusName);
-
         sf::Shape canvas = sf::Shape::Rectangle(
                 m_bonusCanvas->getCanvasPosition().Left, m_bonusCanvas->getCanvasPosition().Top,
                 m_bonusCanvas->getCanvasPosition().Right, m_bonusCanvas->getCanvasPosition().Bottom,
@@ -410,36 +409,73 @@ void CGameBoard::drawBonusCanvas()
         Draw(canvas);
         Draw(*m_bonusCanvas);
         m_bonusCanvas->playNextBonus(GetFrameTime());
-        if (m_bonusCanvas->isFinished() && !m_bonusCanvas->isPaused())
+        if (m_bonusCanvas->isFinished())
         {
-            CBonus bonus = m_bonusCanvas->getBonus();
             CPlayer *me = m_playersList[0];
-            switch (bonus.getType())
+            if (!m_bonusCanvas->isPaused())
             {
-            case CBonus::BombDown:
-                break;
-            case CBonus::BombUp:
-                me->newBonus(new CBonus(CBonus::BombUp));
-                send(m_socket, "BONUS " + me->getNick() + " BOMBUP");
-                break;
-            case CBonus::SpeedDown:
-                if (!me->alreadyHasBonus(CBonus::SpeedDown))
+                CBonus bonus = m_bonusCanvas->getBonus();
+                switch (bonus.getType())
                 {
-                    me->newBonus(new CLimitedBonus(CBonus::SpeedDown, 10.f));
-                    send(m_socket, "BONUS " + me->getNick() + " SPEEDDOWN");
+                case CBonus::BombDown:
+                    me->newBonus(new CBonus(CBonus::BombDown));
+                    break;
+                case CBonus::BombUp:
+                    me->newBonus(new CBonus(CBonus::BombUp));
+                    send(m_socket, "BONUS " + me->getNick() + " BOMBUP");
+                    break;
+                case CBonus::SpeedDown:
+                    if (!me->alreadyHasBonus(CBonus::SpeedDown))
+                    {
+                        me->newBonus(new CLimitedBonus(CBonus::SpeedDown, 10.f));
+                        send(m_socket, "BONUS " + me->getNick() + " SPEEDDOWN");
+                    }
+                    break;
+                case CBonus::SpeedUp:
+                    if (!me->alreadyHasBonus(CBonus::SpeedUp))
+                    {
+                        me->newBonus(new CLimitedBonus(CBonus::SpeedUp, 10.f));
+                        send(m_socket, "BONUS " + me->getNick() + " SPEEDUP");
+                    }
+                    break;
+                case CBonus::FireUp:
+                    me->newBonus(new CBonus(CBonus::FireUp));
+                    break;
+                case CBonus::FireDown:
+                    me->newBonus(new CBonus(CBonus::FireDown));
+                    break;
+                default:
+                    break;
                 }
-                break;
-            case CBonus::SpeedUp:
-                if (!me->alreadyHasBonus(CBonus::SpeedUp))
-                {
-                    me->newBonus(new CLimitedBonus(CBonus::SpeedUp, 10.f));
-                    send(m_socket, "BONUS " + me->getNick() + " SPEEDUP");
-                }
-                break;
-            default:
-                break;
+                m_bonusCanvas->Pause();
             }
-            m_bonusCanvas->Pause();
+            else
+            {
+                CBonus *lastBonus = me->getLastBonus();
+                if (lastBonus != NULL && dynamic_cast<CLimitedBonus *>(lastBonus))
+                {
+                    CLimitedBonus *bonus = dynamic_cast<CLimitedBonus *>(lastBonus);
+                    sf::Shape footer = sf::Shape::Rectangle(
+                     m_bonusCanvas->getCanvasPosition().Left, m_bonusCanvas->getCanvasPosition().Bottom,
+                     m_bonusCanvas->getCanvasPosition().Right, m_bonusCanvas->getCanvasPosition().Bottom + 20,
+                     sf::Color(127, 127, 127), 1.0f, sf::Color(0, 0, 0));
+                    Draw(footer);
+                    unsigned remainingTime = static_cast<unsigned>(bonus->getRemainingTime());
+                    QString time = QString("%1s left").arg(remainingTime);
+                    sf::String timeLeft;
+                    timeLeft.SetText(time.toStdString());
+                    timeLeft.SetStyle(sf::String::Italic);
+                    timeLeft.SetPosition(m_bonusCanvas->getCanvasPosition().Left + 15,
+                                     m_bonusCanvas->getCanvasPosition().Bottom + 2);
+                    timeLeft.SetSize(13.0f);
+                    Draw(timeLeft);
+                    if (remainingTime == 0)
+                    {
+                        delete m_bonusCanvas;
+                        m_bonusCanvas = NULL;
+                    }
+                }
+            }
         }
     }
 }
