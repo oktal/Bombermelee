@@ -270,7 +270,7 @@ void CClient::processData()
         {
             unsigned x = strtol(l[2].toStdString().c_str(), NULL, 10);
             unsigned y = strtol(l[3].toStdString().c_str(), NULL, 10);
-            m_gameBoard->plantedBomb(l[1].toStdString(), x, y);
+            m_gameBoard->plantedBomb(l[1].toStdString(), x, y, l[4].toStdString());
         }
         break;
     case Boom:

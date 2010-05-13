@@ -50,6 +50,7 @@ CGameBoard::CGameBoard(QWidget *parent, const QPoint &position, const QSize &siz
 {
     CPlayer *me = new CPlayer();
     me->setStopTime(0.15f);
+    me->addBonus(new CBonus(CBonus::RemoteMine));
     m_playersList.append(me);
     warmupTimer = new QTimer(this);
     m_gameBegin = true;
@@ -100,6 +101,15 @@ void CGameBoard::OnInit()
     m_bomb.SetImage(*imageManager->GetImage("../bomb.png"));
 
     m_bonus.SetImage(*imageManager->GetImage("../bonus.png"));
+    imageManager->GetImage("../remote_bomb.png");
+    imageManager->GetImage("../speed_up70.png");
+    imageManager->GetImage("../speed_down70.png");
+    imageManager->GetImage("../fire_up70.png");
+    imageManager->GetImage("../fire_down70.png");
+    imageManager->GetImage("../bomb_up70.png");
+    imageManager->GetImage("../bomb_down70.png");
+    imageManager->GetImage("../remote_mine70.png");
+    imageManager->GetImage("../explosion.png");
 }
 
 /**
@@ -562,18 +572,19 @@ void CGameBoard::plantBomb()
         if (!hasUsed)
         {
             m_bombsList.append(new CBomb(x, y, CBomb::Remote, me->getNick()));
+            send(m_socket, "BOMB " + me->getNick() + " " + pos.toStdString() + " REMOTE");
         }
         else
         {
             m_bombsList.append(new CBomb(x, y, CBomb::Normal, me->getNick()));
-            m_socket->write(_m("BOMB " + me->getNick() + " " + pos.toStdString()));
+            send(m_socket, "BOMB " + me->getNick() + " " + pos.toStdString() + " NORMAL");
         }
 
     }
     else
     {
         m_bombsList.append(new CBomb(x, y, CBomb::Normal, me->getNick()));
-        m_socket->write(_m("BOMB " + me->getNick() + " " + pos.toStdString()));
+        send(m_socket, "BOMB " + me->getNick() + " " + pos.toStdString() + " NORMAL");
     }
     me->pausedBombs++;
     QSound::play("../plant.wav");
@@ -587,30 +598,46 @@ void CGameBoard::useSpecialBonus()
     {
         QList<CBomb *>::iterator it;
         unsigned x, y;
+        bool usedBonus = false;
         for (it = m_bombsList.begin(); it != m_bombsList.end(); ++it)
         {
             CBomb *bomb = *it;
-            if (bomb->getType() == CBomb::Remote)
+            if (bomb->getType() == CBomb::Remote &&
+                bomb->getBomber() == me->getNick())
             {
                 m_bombsList.removeOne(*it);
                 x = bomb->getX();
                 y = bomb->getY();
                 delete bomb;
+                usedBonus = true;
                 break;
             }
         }
-        QSound::play("../explosion.wav");
-        m_explosionsList.push_back(new CExplosion(x, y));
-        m_map.setBlock(x, y, Floor);
-        me->pausedBombs--;
-        me->removeBonus(CBonus::RemoteMine);
+        if (usedBonus)
+        {
+            QSound::play("../explosion.wav");
+            QString pos = QString("%1 %2").arg(x).arg(y);
+            m_explosionsList.push_back(new CExplosion(x, y));
+            m_map.setBlock(x, y, Floor);
+            me->pausedBombs--;
+            me->removeBonus(CBonus::RemoteMine);
+            send(m_socket, "BOOM " + me->getNick() + " " + pos.toStdString());
+        }
     }
 }
 
-void CGameBoard::plantedBomb(const std::string &bomber, unsigned x, unsigned y)
+void CGameBoard::plantedBomb(const std::string &bomber, unsigned x, unsigned y,
+                             const std::string &type)
 {
     m_map.setBlock(x, y, Bomb);
-    m_bombsList.append(new CBomb(x, y, CBomb::Normal, bomber));
+    if (type == "NORMAL")
+    {
+        m_bombsList.append(new CBomb(x, y, CBomb::Normal, bomber));
+    }
+    else
+    {
+        m_bombsList.append(new CBomb(x, y, CBomb::Remote, bomber));
+    }
     QSound::play("../plant.wav");
 }
 

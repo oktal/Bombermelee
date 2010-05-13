@@ -36,7 +36,8 @@ public:
     void playerGotBonus(const std::string &nick, const std::string &bonus);
     void setMap(std::string map);
     void bombExplode(const std::string &bomber, unsigned x, unsigned y);
-    void plantedBomb(const std::string &bomber, unsigned x, unsigned y);
+    void plantedBomb(const std::string &bomber, unsigned x, unsigned y,
+                     const std::string &type);
     void setConnected(bool connected);
 
 private:

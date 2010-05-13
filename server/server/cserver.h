@@ -24,6 +24,7 @@ public:
         Move, /* Player MOVE */
         Bomb, /* Player plants a BOMB */
         Bonus, /* Player got a BONUS */
+        Boom, /* Player used remote mine bonus */
         /* For future */
         Pong /* Pong Answer */
     };
