@@ -12,6 +12,7 @@
 #include "cimagemanager.h"
 #include "cexplosion.h"
 #include "cbonuscanvas.h"
+#include "cbomb.h"
 
 static const unsigned WarmupTime = 5; /* 5 seconds before the game begins */
 
@@ -50,6 +51,7 @@ private:
     void drawBonusCanvas();
     bool canMove(Direction movement);
     void plantBomb();
+    void useSpecialBonus();
     CPlayer *getPlayerFromNick(const std::string &nick);
 
     /* Images and Sprites */
@@ -61,6 +63,7 @@ private:
     QList<CPlayer *> m_playersList;
     QList<CExplosion *> m_explosionsList;
     QList<CBonus *> m_bonusList;
+    QList<CBomb *> m_bombsList;
     QString m_nick;
     QTcpSocket *m_socket;
     QTimer *warmupTimer;

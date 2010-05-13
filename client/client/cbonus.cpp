@@ -36,6 +36,10 @@ std::string CBonus::toString() const
         break;
     case BombDown:
         return "Bomb Down";
+        break;
+    case RemoteMine:
+        return "Remote Mine";
+        break;
     default:
         return "";
         break;

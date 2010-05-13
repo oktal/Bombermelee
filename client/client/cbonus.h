@@ -16,7 +16,8 @@ public:
     {
         BombUp, BombDown,
         FireUp, FireDown, FullFire,
-        SpeedUp, SpeedDown
+        SpeedUp, SpeedDown,
+        RemoteMine
     };
 
     CBonus(BonusType type);
@@ -24,7 +25,7 @@ public:
     BonusType getType() const;
     std::string toString() const;
 
-private:
+protected:
     BonusType m_type;
 };
 

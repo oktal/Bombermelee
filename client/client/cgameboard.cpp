@@ -130,19 +130,21 @@ void CGameBoard::OnUpdate()
     {
         unsigned x = me->getX();
         unsigned y = me->getY();
-        m_map.setBlock(x, y, Floor);
         if (m_bonusCanvas == NULL)
         {
             m_bonusCanvas = new CBonusCanvas(0.1f, 4.0f, sf::Rect<int>(535, 320,605, 390));
+            m_map.setBlock(x, y, Floor);
+            QSound::play("../bonus.wav");
         }
-        else
+        else if (m_bonusCanvas->isFinished())
         {
             m_bonusCanvas->Reset();
             m_bonusCanvas->Play();
+            m_map.setBlock(x, y, Floor);
+            QSound::play("../bonus.wav");
         }
         qDebug() << "You got a Bonus";
         me->gotBonus = false;
-        QSound::play("../bonus.wav");
     }
 
     sf::Event event;
@@ -155,6 +157,10 @@ void CGameBoard::OnUpdate()
             {
                 plantBomb();
             }
+            else if (event.Key.Code == sf::Key::E)
+            {
+                useSpecialBonus();
+            }
             break;
         default:
             break;
@@ -162,7 +168,8 @@ void CGameBoard::OnUpdate()
     }
 
 
-    if (GetInput().IsKeyDown(sf::Key::Right))
+    if (GetInput().IsKeyDown(sf::Key::Right) ||
+        GetInput().IsKeyDown(sf::Key::D))
     {
         if (me->canMove(Right, m_map))
         {
@@ -178,7 +185,8 @@ void CGameBoard::OnUpdate()
             me->Play();
         }
     }
-     else if (GetInput().IsKeyDown(sf::Key::Left))
+     else if (GetInput().IsKeyDown(sf::Key::Left) ||
+              GetInput().IsKeyDown(sf::Key::Q))
      {
          if (me->canMove(Left, m_map))
          {
@@ -194,7 +202,8 @@ void CGameBoard::OnUpdate()
              me->Play();
          }
      }
-     else if (GetInput().IsKeyDown(sf::Key::Down))
+     else if (GetInput().IsKeyDown(sf::Key::Down) ||
+              GetInput().IsKeyDown(sf::Key::S))
      {
          if (me->canMove(Down, m_map))
          {
@@ -211,7 +220,8 @@ void CGameBoard::OnUpdate()
          }
 
      }
-     else if (GetInput().IsKeyDown(sf::Key::Up))
+     else if (GetInput().IsKeyDown(sf::Key::Up) ||
+              GetInput().IsKeyDown(sf::Key::Z))
      {
          if (me->canMove(Up, m_map))
          {
@@ -269,13 +279,30 @@ void CGameBoard::drawMap()
             case Player:
                 break;
             case Bomb:
-                m_bomb.SetPosition((34 * i) + 6, (34 * j) + 6);
-                Draw(m_bomb);
+                //m_bomb.SetPosition((34 * i) + 6, (34 * j) + 6);
+                //Draw(m_bomb);
                 break;
             default:
                 break;
             }
         }
+    }
+    QList<CBomb *>::const_iterator it;
+    CImageManager *imageManager = CImageManager::GetInstance();
+    for (it = m_bombsList.begin(); it != m_bombsList.end(); ++it)
+    {
+        unsigned x = (*it)->getX();
+        unsigned y = (*it)->getY();
+        if ((*it)->getType() == CBomb::Normal)
+        {
+            m_bomb.SetImage(*imageManager->GetImage("../bomb.png"));
+        }
+        else
+        {
+            m_bomb.SetImage(*imageManager->GetImage("../remote_bomb.png"));
+        }
+        m_bomb.SetPosition((34 * x) + 6, (34 * y) + 6);
+        Draw(m_bomb);
     }
 }
 
@@ -390,24 +417,29 @@ void CGameBoard::drawBonusCanvas()
 {
     if (m_bonusCanvas != NULL)
     {
+        /* Header : bonus name */
         sf::Shape header = sf::Shape::Rectangle(
                 m_bonusCanvas->getCanvasPosition().Left, m_bonusCanvas->getCanvasPosition().Top - 20,
                 m_bonusCanvas->getCanvasPosition().Right, m_bonusCanvas->getCanvasPosition().Bottom - 20,
                 sf::Color(127, 127, 127), 1.0f, sf::Color(0, 0, 0));
         Draw(header);
+
+        /* Bonus Name */
         sf::String bonusName;
         bonusName.SetText(m_bonusCanvas->getBonus().toString());
         bonusName.SetSize(11.0f);
         bonusName.SetColor(sf::Color(255, 255, 255));
-        bonusName.SetPosition(m_bonusCanvas->getCanvasPosition().Left + 5,
+        bonusName.SetPosition(m_bonusCanvas->getCanvasPosition().Left + 3,
                               m_bonusCanvas->getCanvasPosition().Top - 17);
         Draw(bonusName);
+
         sf::Shape canvas = sf::Shape::Rectangle(
                 m_bonusCanvas->getCanvasPosition().Left, m_bonusCanvas->getCanvasPosition().Top,
                 m_bonusCanvas->getCanvasPosition().Right, m_bonusCanvas->getCanvasPosition().Bottom,
                 sf::Color(127, 127, 127), 1.0f, sf::Color(0, 0, 0));
         Draw(canvas);
         Draw(*m_bonusCanvas);
+
         m_bonusCanvas->playNextBonus(GetFrameTime());
         if (m_bonusCanvas->isFinished())
         {
@@ -415,34 +447,42 @@ void CGameBoard::drawBonusCanvas()
             if (!m_bonusCanvas->isPaused())
             {
                 CBonus bonus = m_bonusCanvas->getBonus();
+                /* Let's check which bonus we've got */
                 switch (bonus.getType())
                 {
                 case CBonus::BombDown:
-                    me->newBonus(new CBonus(CBonus::BombDown));
+                    me->addBonus(new CBonus(CBonus::BombDown));
                     break;
                 case CBonus::BombUp:
-                    me->newBonus(new CBonus(CBonus::BombUp));
+                    me->addBonus(new CBonus(CBonus::BombUp));
                     send(m_socket, "BONUS " + me->getNick() + " BOMBUP");
                     break;
                 case CBonus::SpeedDown:
-                    if (!me->alreadyHasBonus(CBonus::SpeedDown))
+                    if (me->getBonus(CBonus::SpeedDown) == NULL)
                     {
-                        me->newBonus(new CLimitedBonus(CBonus::SpeedDown, 10.f));
+                        me->addBonus(new CLimitedBonus(CBonus::SpeedDown, 10.f));
                         send(m_socket, "BONUS " + me->getNick() + " SPEEDDOWN");
                     }
                     break;
                 case CBonus::SpeedUp:
-                    if (!me->alreadyHasBonus(CBonus::SpeedUp))
+                    if (me->getBonus(CBonus::SpeedUp) == NULL)
                     {
-                        me->newBonus(new CLimitedBonus(CBonus::SpeedUp, 10.f));
+                        me->addBonus(new CLimitedBonus(CBonus::SpeedUp, 10.f));
                         send(m_socket, "BONUS " + me->getNick() + " SPEEDUP");
                     }
                     break;
                 case CBonus::FireUp:
-                    me->newBonus(new CBonus(CBonus::FireUp));
+                    me->addBonus(new CBonus(CBonus::FireUp));
                     break;
                 case CBonus::FireDown:
-                    me->newBonus(new CBonus(CBonus::FireDown));
+                    me->addBonus(new CBonus(CBonus::FireDown));
+                    break;
+                case CBonus::RemoteMine:
+                    if (me->getBonus(CBonus::RemoteMine) == NULL)
+                    {
+                        me->addBonus(new CBonus(CBonus::RemoteMine));
+                        send(m_socket, "BONUS " + me->getNick() + " REMOTEMINE");
+                    }
                     break;
                 default:
                     break;
@@ -451,17 +491,22 @@ void CGameBoard::drawBonusCanvas()
             }
             else
             {
-                CBonus *lastBonus = me->getLastBonus();
+                CBonus *lastBonus = me->getBonusList().back();
                 if (lastBonus != NULL && dynamic_cast<CLimitedBonus *>(lastBonus))
                 {
                     CLimitedBonus *bonus = dynamic_cast<CLimitedBonus *>(lastBonus);
+
+                    /* Footer : remaining time */
                     sf::Shape footer = sf::Shape::Rectangle(
                      m_bonusCanvas->getCanvasPosition().Left, m_bonusCanvas->getCanvasPosition().Bottom,
                      m_bonusCanvas->getCanvasPosition().Right, m_bonusCanvas->getCanvasPosition().Bottom + 20,
                      sf::Color(127, 127, 127), 1.0f, sf::Color(0, 0, 0));
                     Draw(footer);
+
                     unsigned remainingTime = static_cast<unsigned>(bonus->getRemainingTime());
                     QString time = QString("%1s left").arg(remainingTime);
+
+                    /* Remaining time */
                     sf::String timeLeft;
                     timeLeft.SetText(time.toStdString());
                     timeLeft.SetStyle(sf::String::Italic);
@@ -498,14 +543,74 @@ void CGameBoard::plantBomb()
     m_map.setBlock(x, y, Bomb);
 
     QString pos = QString("%1 %2").arg(x).arg(y);
-    m_socket->write(_m("BOMB " + me->getNick() + " " + pos.toStdString()));
+
+    CBonus *bonus;
+    bool hasUsed;
+    /* Have remote mine bonus ? */
+    if ((bonus = me->getBonus(CBonus::RemoteMine)) != NULL)
+    {
+        QList<CBomb *>::const_iterator it;
+        for (it = m_bombsList.begin(); it != m_bombsList.end(); ++it)
+        {
+            if ((*it)->getType() == CBomb::Remote &&
+                (*it)->getBomber() == me->getNick())
+            {
+                hasUsed = true;
+                break;
+            }
+        }
+        if (!hasUsed)
+        {
+            m_bombsList.append(new CBomb(x, y, CBomb::Remote, me->getNick()));
+        }
+        else
+        {
+            m_bombsList.append(new CBomb(x, y, CBomb::Normal, me->getNick()));
+            m_socket->write(_m("BOMB " + me->getNick() + " " + pos.toStdString()));
+        }
+
+    }
+    else
+    {
+        m_bombsList.append(new CBomb(x, y, CBomb::Normal, me->getNick()));
+        m_socket->write(_m("BOMB " + me->getNick() + " " + pos.toStdString()));
+    }
     me->pausedBombs++;
     QSound::play("../plant.wav");
+}
+
+void CGameBoard::useSpecialBonus()
+{
+    CBonus *bonus;
+    CPlayer *me = m_playersList[0];
+    if ((bonus = me->getBonus(CBonus::RemoteMine)) != NULL)
+    {
+        QList<CBomb *>::iterator it;
+        unsigned x, y;
+        for (it = m_bombsList.begin(); it != m_bombsList.end(); ++it)
+        {
+            CBomb *bomb = *it;
+            if (bomb->getType() == CBomb::Remote)
+            {
+                m_bombsList.removeOne(*it);
+                x = bomb->getX();
+                y = bomb->getY();
+                delete bomb;
+                break;
+            }
+        }
+        QSound::play("../explosion.wav");
+        m_explosionsList.push_back(new CExplosion(x, y));
+        m_map.setBlock(x, y, Floor);
+        me->pausedBombs--;
+        me->removeBonus(CBonus::RemoteMine);
+    }
 }
 
 void CGameBoard::plantedBomb(const std::string &bomber, unsigned x, unsigned y)
 {
     m_map.setBlock(x, y, Bomb);
+    m_bombsList.append(new CBomb(x, y, CBomb::Normal, bomber));
     QSound::play("../plant.wav");
 }
 
@@ -516,6 +621,18 @@ void CGameBoard::bombExplode(const std::string &bomber, unsigned x, unsigned y)
         m_playersList[0]->pausedBombs--;
     }
     m_map.setBlock(x, y, Floor);
+    /* Remove the bomb from the list */
+    QList<CBomb *>::iterator it;
+    for (it = m_bombsList.begin(); it != m_bombsList.end(); ++it)
+    {
+        CBomb *bomb = *it;
+        if (bomb->getX() == x && bomb->getY() == y)
+        {
+            m_bombsList.removeOne(*it);
+            delete bomb;
+            break;
+        }
+    }
     QSound::play("../explosion.wav");
     m_explosionsList.push_back(new CExplosion(x, y));
 }
@@ -642,15 +759,15 @@ void CGameBoard::playerGotBonus(const std::string &nick, const std::string &bonu
 
     if (bonus == "SPEEDUP")
     {
-        player->newBonus(new CLimitedBonus(CBonus::SpeedUp, 10.0f));
+        player->addBonus(new CLimitedBonus(CBonus::SpeedUp, 10.0f));
     }
     else if (bonus == "SPEEDDOWN")
     {
-        player->newBonus(new CLimitedBonus(CBonus::SpeedDown, 10.0f));
+        player->addBonus(new CLimitedBonus(CBonus::SpeedDown, 10.0f));
     }
     else if (bonus == "BOMBUP")
     {
-        player->newBonus(new CBonus(CBonus::BombUp));
+        player->addBonus(new CBonus(CBonus::BombUp));
     }
 }
 
