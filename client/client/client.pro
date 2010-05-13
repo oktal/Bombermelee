@@ -25,7 +25,8 @@ HEADERS += cconnect.h \
     cparticle.h \
     cbonus.h \
     cbonuscanvas.h \
-    climitedbonus.h
+    climitedbonus.h \
+    cbomb.h
 SOURCES += cconnect.cpp \
     main.cpp \
     QSFMLCanvas.cpp \
@@ -41,6 +42,7 @@ SOURCES += cconnect.cpp \
     cexplosion.cpp \
     cbonus.cpp \
     cbonuscanvas.cpp \
-    climitedbonus.cpp
+    climitedbonus.cpp \
+    cbomb.cpp
 QT += network
 QT += multimedia

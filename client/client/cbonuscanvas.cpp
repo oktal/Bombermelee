@@ -15,6 +15,14 @@ CBonusCanvas::CBonusCanvas(float time, float timeToLeave, sf::Rect<int> position
     m_bonusList.push_back(new CBonus(CBonus::FireUp));
     m_bonusList.push_back(new CBonus(CBonus::FireUp));
     m_bonusList.push_back(new CBonus(CBonus::FireDown));
+    m_bonusList.push_back(new CBonus(CBonus::RemoteMine));
+    m_bonusList.push_back(new CBonus(CBonus::RemoteMine));
+    m_bonusList.push_back(new CBonus(CBonus::RemoteMine));
+    m_bonusList.push_back(new CBonus(CBonus::RemoteMine));
+    m_bonusList.push_back(new CBonus(CBonus::RemoteMine));
+    m_bonusList.push_back(new CBonus(CBonus::RemoteMine));
+    m_bonusList.push_back(new CBonus(CBonus::RemoteMine));
+    m_bonusList.push_back(new CBonus(CBonus::RemoteMine));
 
     std::random_shuffle(m_bonusList.begin(), m_bonusList.end());
 
@@ -53,6 +61,9 @@ void CBonusCanvas::setBonusImage()
         SetImage(*imageManager->GetImage("../fire_up70.png"));
         break;
     case CBonus::FullFire:
+        break;
+    case CBonus::RemoteMine:
+        SetImage(*imageManager->GetImage("../remote_mine70.png"));
         break;
     }
 }

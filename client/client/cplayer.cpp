@@ -434,7 +434,7 @@ void CPlayer::setCorrectPosition()
     }
 }
 
-void CPlayer::newBonus(CBonus *bonus)
+void CPlayer::addBonus(CBonus *bonus)
 {
     m_bonusList.push_back(bonus);
     switch (bonus->getType())
@@ -453,27 +453,49 @@ void CPlayer::newBonus(CBonus *bonus)
             maxBombs++;
         }
         break;
+    case CBonus::BombDown:
+        if (maxBombs > 1)
+        {
+            maxBombs--;
+        }
+        break;
     default:
         break;
     }
 }
 
-bool CPlayer::alreadyHasBonus(CBonus::BonusType type)
+void CPlayer::removeBonus(CBonus::BonusType type)
+{
+    std::list<CBonus *>::iterator it = m_bonusList.begin();
+    while (it != m_bonusList.end())
+    {
+        CBonus *bonus = *it;
+        if (bonus->getType() == type)
+        {
+            it = m_bonusList.erase(it);
+            delete bonus;
+            //break;
+        }
+        ++it;
+    }
+}
+
+CBonus *CPlayer::getBonus(CBonus::BonusType type)
 {
     std::list<CBonus *>::iterator it;
     for (it = m_bonusList.begin(); it != m_bonusList.end(); ++it)
     {
         if ((*it)->getType() == type)
         {
-            return true;
+            return *it;
         }
     }
-    return false;
+    return NULL;
 }
 
-CBonus *CPlayer::getLastBonus() const
+std::list<CBonus *> CPlayer::getBonusList() const
 {
-    return m_bonusList.back();
+    return m_bonusList;
 }
 
 void CPlayer::updateBonusTime(const float &elapsedTime)

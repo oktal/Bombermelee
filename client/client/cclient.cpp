@@ -296,6 +296,10 @@ void CClient::processData()
             {
                 type = "Bonus";
             }
+            else if (l[2] == "REMOTEMINE")
+            {
+                type = "Bonus";
+            }
             appendToChatBox(tr("<font color='blue'><em>%1 has got <strong>%2</strong> %3</em></font>")
                             .arg(l[1]).arg(l[2]).arg(type));
         }
