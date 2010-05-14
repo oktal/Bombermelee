@@ -60,6 +60,7 @@ private:
     sf::Sprite m_box;
     sf::Sprite m_bomb;
     sf::Sprite m_bonus;
+    sf::Image m_explosion;
 
     QList<CPlayer *> m_playersList;
     QList<CExplosion *> m_explosionsList;
@@ -72,6 +73,7 @@ private:
     bool m_gameBegin;
     bool m_connected;
     unsigned m_warmupTime;
+    float m_frameRate;
     CMap m_map;
     Status m_status;
 

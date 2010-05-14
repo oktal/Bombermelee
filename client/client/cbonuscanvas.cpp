@@ -5,26 +5,15 @@
 
 CBonusCanvas::CBonusCanvas(float time, float timeToLeave, sf::Rect<int> position)
 {
-    m_bonusList.push_back(new CBonus(CBonus::SpeedUp));
+    m_bonusList.push_back(new CBonus(CBonus::BombUp));
+    m_bonusList.push_back(new CBonus(CBonus::FireUp));
     m_bonusList.push_back(new CBonus(CBonus::SpeedUp));
     m_bonusList.push_back(new CBonus(CBonus::SpeedDown));
-    m_bonusList.push_back(new CBonus(CBonus::BombUp));
-    m_bonusList.push_back(new CBonus(CBonus::BombUp));
-    m_bonusList.push_back(new CBonus(CBonus::BombUp));
     m_bonusList.push_back(new CBonus(CBonus::BombDown));
-    m_bonusList.push_back(new CBonus(CBonus::FireUp));
-    m_bonusList.push_back(new CBonus(CBonus::FireUp));
     m_bonusList.push_back(new CBonus(CBonus::FireDown));
     m_bonusList.push_back(new CBonus(CBonus::RemoteMine));
-    m_bonusList.push_back(new CBonus(CBonus::RemoteMine));
-    m_bonusList.push_back(new CBonus(CBonus::RemoteMine));
-    m_bonusList.push_back(new CBonus(CBonus::RemoteMine));
-    m_bonusList.push_back(new CBonus(CBonus::RemoteMine));
-    m_bonusList.push_back(new CBonus(CBonus::RemoteMine));
-    m_bonusList.push_back(new CBonus(CBonus::RemoteMine));
-    m_bonusList.push_back(new CBonus(CBonus::RemoteMine));
 
-    std::random_shuffle(m_bonusList.begin(), m_bonusList.end());
+    //std::random_shuffle(m_bonusList.begin(), m_bonusList.end());
 
     m_time = time;
     m_totalTime = 0.0f;
@@ -107,9 +96,8 @@ void CBonusCanvas::playNextBonus(const float &elapsedTime)
         unsigned bonus;
         do
         {
-            bonus = rand() % m_bonusList.size();
-        } while (bonus == m_currentBonus ||
-                 m_bonusList[bonus]->getType() == m_bonusList[m_currentBonus]->getType());
+            bonus = sf::Randomizer::Random(0, m_bonusList.size() - 1);
+        } while (bonus == m_currentBonus);
         m_currentBonus = bonus;
         setBonusImage();
     }

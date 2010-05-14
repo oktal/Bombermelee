@@ -1,6 +1,5 @@
 #include "cexplosion.h"
-#include "cimagemanager.h"
-#include <iostream>
+#include "cmap.h"
 
 /*
 This file is part of Bombermelee.
@@ -19,28 +18,133 @@ This file is part of Bombermelee.
     along with Bombermelee.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-CExplosion::CExplosion(unsigned x, unsigned y)
+CExplosion::CExplosion(unsigned x, unsigned y, unsigned range,
+                       CMap map, const std::string &bomber,
+                       sf::Image explosion)
 {
-    CImageManager *imageManager = CImageManager::GetInstance();
-    m_explosion = *imageManager->GetImage("../explosion.png");
     m_x = x;
     m_y = y;
-
+    m_bomber = bomber;
     m_particles.push_back(new CParticle(CParticle::Middle,
-                                        x, y, m_explosion));
-    m_particles.push_back(new CParticle(CParticle::HorizontalRight,
-                                        x + 2, y, m_explosion));
-    m_particles.push_back(new CParticle(CParticle::HorizontalLeft,
-                                        x - 1, y, m_explosion));
-    m_particles.push_back(new CParticle(CParticle::VerticalUp,
-                                        x, y - 1, m_explosion));
-    m_particles.push_back(new CParticle(CParticle::VerticalDown,
-                                        x, y + 1, m_explosion));
-    m_particles.push_back(new CParticle(CParticle::Horizontal,
-                                        x + 1, y, m_explosion));
+                                        x, y,
+                                        explosion));
+
+    /* LEFT */
+    for (unsigned i = 1; i <= range; ++i)
+    {
+        if (map.getBlock((x - i), y) == Wall)
+        {
+            break;
+        }
+        else if (x - i == 0)
+        {
+            m_particles.push_back(new CParticle(CParticle::HorizontalLeft, x - i, y,
+                                                    explosion));
+            break;
+        }
+        else if (map.getBlock(x - i, y) == Box ||
+                 i == range)
+        {
+            m_particles.push_back(new CParticle(CParticle::HorizontalLeft, x - i, y,
+                                                explosion));
+            break;
+        }
+        else
+        {
+            m_particles.push_back(new CParticle(CParticle::Horizontal, x - i, y,
+                                                explosion));
+        }
+    }
+
+    /* RIGHT */
+    for (unsigned i = 1; i <= range; ++i)
+    {
+        if (map.getBlock((x + i), y) == Wall ||
+            x == MAP_WIDTH - 1)
+        {
+            break;
+        }
+        else if (x + i == MAP_WIDTH - 1)
+        {
+            m_particles.push_back(new CParticle(CParticle::HorizontalRight, x + i, y,
+                                                    explosion));
+            break;
+        }
+        else if (map.getBlock(x + i, y) == Box ||
+                 i == range)
+        {
+            m_particles.push_back(new CParticle(CParticle::HorizontalRight, x + i, y,
+                                                explosion));
+            break;
+        }
+        else
+        {
+            m_particles.push_back(new CParticle(CParticle::Horizontal, x + i, y,
+                                                explosion));
+        }
+    }
+
+    /* TOP */
+    for (unsigned i = 1; i <= range; ++i)
+    {
+        if (map.getBlock(x, y - i) == Wall)
+        {
+            break;
+        }
+        else if (y - i == 0)
+        {
+            m_particles.push_back(new CParticle(CParticle::VerticalUp, x, y - i,
+                                                explosion));
+            break;
+        }
+        else if (map.getBlock(x, y - i) == Box ||
+                 i == range)
+        {
+            m_particles.push_back(new CParticle(CParticle::VerticalUp, x, y - i,
+                                                explosion));
+            break;
+        }
+        else
+        {
+            m_particles.push_back(new CParticle(CParticle::Vertical, x, y - i,
+                                                explosion));
+        }
+    }
+
+    /* DOWN */
+    for (unsigned i = 1; i <= range; ++i)
+    {
+        if (map.getBlock(x, y + i) == Wall)
+        {
+            break;
+        }
+        else if (y + i == MAP_HEIGHT)
+        {
+            m_particles.push_back(new CParticle(CParticle::VerticalDown, x, y + i,
+                                                explosion));
+            break;
+        }
+        else if (map.getBlock(x, y + i) == Box ||
+                 i == range)
+        {
+            m_particles.push_back(new CParticle(CParticle::VerticalDown, x, y + i,
+                                                explosion));
+            break;
+        }
+        else
+        {
+            m_particles.push_back(new CParticle(CParticle::Vertical, x, y + i,
+                                                explosion));
+        }
+    }
 }
 
 QVector<CParticle *> CExplosion::getParticles() const
 {
     return m_particles;
+}
+
+std::string CExplosion::getBomber() const
+{
+    return m_bomber;
 }

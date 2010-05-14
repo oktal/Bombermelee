@@ -26,14 +26,17 @@ This file is part of Bombermelee.
 class CExplosion
 {
 public:
-    CExplosion(unsigned x, unsigned y);
+    CExplosion(unsigned x, unsigned y, unsigned range,
+               CMap map, const std::string &bomber,
+               sf::Image explosion);
     QVector<CParticle *> getParticles() const;
+    std::string getBomber() const;
 
 private:
     QVector<CParticle *> m_particles;
-    sf::Image m_explosion;
     unsigned m_x;
     unsigned m_y;
+    std::string m_bomber;
 };
 
 #endif // CEXPLOSION_H
