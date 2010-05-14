@@ -38,7 +38,7 @@ static inline char const *_m(const std::string &message)
 CClient::CClient(QWidget *parent, const QString &address, const QString &nick) :
         m_address(address), m_nick(nick)
 {
-    m_gameBoard = new CGameBoard(this, QPoint(10, 10), QSize(630, 510), 24);
+    m_gameBoard = new CGameBoard(this, QPoint(10, 10), QSize(630, 510));
     m_gameBoard->setNick(nick.toStdString());
 
     m_chatBox = new QTextEdit(this);

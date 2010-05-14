@@ -63,9 +63,10 @@ CParticle::CParticle(ParticleType type, unsigned x, unsigned y, sf::Image explos
         m_anim.PushFrame(Frame(&m_explosion, sf::Rect<int>(66, 67, 97, 97)));
         break;
     case Vertical:
-        m_anim.PushFrame(Frame(&m_explosion, sf::Rect<int>(39, 60, 58, 92)));
-        m_anim.PushFrame(Frame(&m_explosion, sf::Rect<int>(38, 190, 61, 222)));
-        m_anim.PushFrame(Frame(&m_explosion, sf::Rect<int>(32, 326, 63, 357)));
+        m_anim.PushFrame(Frame(&m_explosion, sf::Rect<int>(169, 181, 196, 213)));
+        m_anim.PushFrame(Frame(&m_explosion, sf::Rect<int>(34, 182, 63, 213)));
+        m_anim.PushFrame(Frame(&m_explosion, sf::Rect<int>(169, 36, 202, 67)));
+        m_anim.PushFrame(Frame(&m_explosion, sf::Rect<int>(33, 33, 65, 65)));
         break;
     }
     SetAnim(&m_anim);

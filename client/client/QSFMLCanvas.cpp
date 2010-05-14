@@ -10,9 +10,6 @@
     #include <X11/Xlib.h>
 #endif
 
-#include <QtGui>
-#include <QSizePolicy>
-
 
 ////////////////////////////////////////////////////////////
 /// Construct the QSFMLCanvas
@@ -75,10 +72,6 @@ QPaintEngine* QSFMLCanvas::paintEngine() const
     return 0;
 }
 
-void QSFMLCanvas::resizeEvent(QResizeEvent *event)
-{
-
-}
 
 ////////////////////////////////////////////////////////////
 /// Called when the widget is shown ;

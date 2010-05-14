@@ -24,43 +24,6 @@ This file is part of Bombermelee.
     along with Bombermelee.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-static inline bool collision(const sf::Sprite& s1,const sf::Sprite& s2, const int AlphaMax = -1)
-{
-    sf::Vector2f pos = s1.GetPosition() - s1.GetCenter();
-    const sf::FloatRect r1(pos.x, pos.y, pos.x + s1.GetSize().x, pos.y + s1.GetSize().y);
-    pos = s2.GetPosition() - s2.GetCenter();
-    const sf::FloatRect r2(pos.x, pos.y, pos.x + s2.GetSize().x, pos.y + s2.GetSize().y);
-
-    // Espace de collision potentiel.
-    sf::FloatRect zone;
-
-    // Testons si les Sprites se superposent.
-    if (r1.Intersects(r2, &zone))
-    {
-        if (AlphaMax >= 0)
-        {
-            int left1 = static_cast<int>(zone.Left - r1.Left);
-            int top1 = static_cast<int>(zone.Top - r1.Top);
-            int left2 = static_cast<int>(zone.Left - r2.Left);
-            int top2 = static_cast<int>(zone.Top - r2.Top);
-            int width = static_cast<int>(zone.GetWidth());
-            int height = static_cast<int>(zone.GetHeight());
-
-            for (int y = 0; y < height; y++)
-            {
-                for (int x = 0; x < width; x++)
-                {
-                    if (s1.GetPixel(x+left1, y+top1).a > AlphaMax && s2.GetPixel(x+left2, y+top2).a > AlphaMax)
-                        return true;
-                }
-            }
-            return false;
-        }
-        //qDebug() << "Collision";
-        return true;
-    }
-    return false;
-}
 
 CPlayer::CPlayer(const std::string &nick, const std::string &color) :
         Animated(true, true, 0.2f),
@@ -69,6 +32,7 @@ CPlayer::CPlayer(const std::string &nick, const std::string &color) :
     setColor(color);
     pausedBombs = 0;
     maxBombs = 1; /* 1 bomb maximum at the begining */
+    bombRange = 1;
     gotBonus = false; /* No bonus */
 
     /* UP ANIMATION */
@@ -101,6 +65,7 @@ CPlayer::CPlayer(const std::string &nick, const std::string &color) :
     m_elapsedTime = 0.0;
     m_stopTime = 0.0;
     m_speed = Speed;
+    m_dead = false;
 }
 
 unsigned CPlayer::getX() const
@@ -181,6 +146,12 @@ unsigned CPlayer::getSpeed() const
 {
     return m_speed;
 }
+
+bool CPlayer::isDead() const
+{
+    return m_dead;
+}
+
 /**
   * Set the stop time
 */
@@ -230,6 +201,10 @@ const std::string &CPlayer::getNick() const
 
 bool CPlayer::canMove(Direction direction, CMap &map)
 {
+    if (m_dead)
+    {
+        return false;
+    }
     int _x = GetPosition().x, _y = GetPosition().y;
     /* In which block are we ? */
     unsigned x = (_x + GetSubRect().GetWidth() / 2) / BLOCK_SIZE;
@@ -400,6 +375,7 @@ void CPlayer::explode()
     if (GetAnim() != &m_player_explode)
     {
         SetAnim(&m_player_explode);
+        m_dead = true;
     }
 }
 
@@ -436,7 +412,11 @@ void CPlayer::setCorrectPosition()
 
 void CPlayer::addBonus(CBonus *bonus)
 {
-    m_bonusList.push_back(bonus);
+    if (getBonus(bonus->getType()) == NULL)
+    {
+        m_bonusList.push_back(bonus);
+        std::cout << "Bonus added" << std::endl;
+    }
     switch (bonus->getType())
     {
     case CBonus::SpeedUp:
@@ -459,6 +439,18 @@ void CPlayer::addBonus(CBonus *bonus)
             maxBombs--;
         }
         break;
+    case CBonus::FireUp:
+        if (bombRange < MaxRange)
+        {
+            bombRange++;
+        }
+        break;
+    case CBonus::FireDown:
+        if (bombRange > 1)
+        {
+            bombRange--;
+        }
+        break;
     default:
         break;
     }
@@ -472,9 +464,9 @@ void CPlayer::removeBonus(CBonus::BonusType type)
         CBonus *bonus = *it;
         if (bonus->getType() == type)
         {
-            it = m_bonusList.erase(it);
             delete bonus;
-            //break;
+            m_bonusList.erase(it);
+            break;
         }
         else
         {

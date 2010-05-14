@@ -8,7 +8,6 @@
 #include <QtMultimedia>
 #include <QVector>
 #include <cassert>
-#include <ctime>
 
 /*
 This file is part of Bombermelee.
@@ -50,11 +49,11 @@ CGameBoard::CGameBoard(QWidget *parent, const QPoint &position, const QSize &siz
 {
     CPlayer *me = new CPlayer();
     me->setStopTime(0.15f);
-    me->addBonus(new CBonus(CBonus::RemoteMine));
+    me->Pause();
     m_playersList.append(me);
     warmupTimer = new QTimer(this);
     m_gameBegin = true;
-    m_connected = false;
+    m_connected = true;
     m_warmupTime = 0;
     m_status = Waiting_Players;
     m_bonusCanvas = NULL;
@@ -69,7 +68,7 @@ CGameBoard::CGameBoard(QWidget *parent, const QPoint &position, const QSize &siz
     m_map.setBlock(12, 0, Bonus);
     m_map.setBlock(10, 0, Bonus);
     m_map.setBlock(9, 2, Bonus);
-    srand(time(NULL));
+    SetFramerateLimit(60);
 }
 
 CGameBoard::~CGameBoard()
@@ -95,12 +94,11 @@ void CGameBoard::OnInit()
 {
     CImageManager *imageManager = CImageManager::GetInstance();
     m_wall.SetImage(*imageManager->GetImage("../mur.png"));
-
     m_box.SetImage(*imageManager->GetImage("../box.png"));
-
     m_bomb.SetImage(*imageManager->GetImage("../bomb.png"));
-
     m_bonus.SetImage(*imageManager->GetImage("../bonus.png"));
+    m_explosion = *imageManager->GetImage("../explosion.png");
+
     imageManager->GetImage("../remote_bomb.png");
     imageManager->GetImage("../speed_up70.png");
     imageManager->GetImage("../speed_down70.png");
@@ -120,6 +118,8 @@ void CGameBoard::OnUpdate()
     Clear(sf::Color(195, 195, 195)); /* Grey */
     sf::Shape rightBorder = sf::Shape::Rectangle(510, 0, 630, 510, sf::Color(127, 127, 127));
     Draw(rightBorder);
+
+    m_frameRate = 1.f / GetFrameTime();
     drawMap();
     drawFPS();
     drawStatus();
@@ -337,14 +337,25 @@ void CGameBoard::drawPlayers()
             {
                 player->move(player->getDirection(), GetFrameTime());
             }
-            player->anim(GetFrameTime());
         }
+
+        if (player->isDead())
+        {
+            if (static_cast<unsigned>(player->GetCurrentFrame()) ==
+                player->GetAnim()->Size() - 1)
+            {
+                player->Pause();
+                continue;
+            }
+        }
+        player->anim(GetFrameTime());
         Draw(*player);
     }
 }
 
 void CGameBoard::drawExplosions()
 {
+    CPlayer *me = m_playersList[0];
     QList<CExplosion *>::iterator it;
     for (it = m_explosionsList.begin(); it != m_explosionsList.end(); ++it)
     {
@@ -370,15 +381,23 @@ void CGameBoard::drawExplosions()
             }
             Draw(*particles[j]);
             particles[j]->anim(GetFrameTime());
+            if (collision(*particles[j], *me))
+            {
+                me->explode();
+                me->setKiller((*it)->getBomber());
+                me->setDirection(Stopped);
+                if (me->IsPaused())
+                {
+                    me->Play();
+                }
+            }
         }
     }
 }
 
 void CGameBoard::drawFPS()
 {
-    float ElapsedTime = GetFrameTime();
-    unsigned number_fps = static_cast<int>(ElapsedTime * 1000);
-    sf::String FPS(QString("%1 FPS").arg(number_fps).toStdString());
+    sf::String FPS(QString("%1 FPS").arg(static_cast<unsigned>(m_frameRate)).toStdString());
     FPS.SetPosition(580, 0);
     FPS.SetSize(15);
     Draw(FPS);
@@ -458,6 +477,7 @@ void CGameBoard::drawBonusCanvas()
             {
                 CBonus bonus = m_bonusCanvas->getBonus();
                 /* Let's check which bonus we've got */
+
                 switch (bonus.getType())
                 {
                 case CBonus::BombDown:
@@ -617,7 +637,8 @@ void CGameBoard::useSpecialBonus()
         {
             QSound::play("../explosion.wav");
             QString pos = QString("%1 %2").arg(x).arg(y);
-            m_explosionsList.push_back(new CExplosion(x, y));
+            m_explosionsList.push_back(new CExplosion(x, y, me->bombRange, m_map,
+                                                      me->getNick(), m_explosion));
             m_map.setBlock(x, y, Floor);
             me->pausedBombs--;
             me->removeBonus(CBonus::RemoteMine);
@@ -643,6 +664,7 @@ void CGameBoard::plantedBomb(const std::string &bomber, unsigned x, unsigned y,
 
 void CGameBoard::bombExplode(const std::string &bomber, unsigned x, unsigned y)
 {
+    CPlayer *player = getPlayerFromNick(bomber);
     if (bomber == m_playersList[0]->getNick()) /* If I am the bomber */
     {
         m_playersList[0]->pausedBombs--;
@@ -661,7 +683,8 @@ void CGameBoard::bombExplode(const std::string &bomber, unsigned x, unsigned y)
         }
     }
     QSound::play("../explosion.wav");
-    m_explosionsList.push_back(new CExplosion(x, y));
+    m_explosionsList.push_back(new CExplosion(x, y, player->bombRange, m_map,
+                                              bomber, m_explosion));
 }
 
 
@@ -727,6 +750,7 @@ void CGameBoard::newPlayer(const std::string &nick, const std::string &color)
     /* Create and add the new player on the other players list */
     CPlayer *player = new CPlayer(nick, color);
     player->setCorrectPosition();
+    player->Pause();
     m_playersList.append(player);
     m_status = None;
 }
