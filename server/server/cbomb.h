@@ -13,7 +13,7 @@ class CBomb : public QObject
 
 public:
     CBomb();
-    CBomb(const QString &bomber, unsigned x, unsigned y, unsigned explodeTime);
+    CBomb(const QString &bomber, unsigned x, unsigned y, unsigned explodeTime = ExplodeTime);
     QString bomber;
     unsigned x;
     unsigned y;

@@ -74,7 +74,7 @@ public:
     const std::string &getNick() const;
     Direction getDirection() const;
 
-    bool canMove(Direction direction, CMap &map);
+    BlockType getCollision(Direction direction, CMap &map);
     void explode();
     bool isDead() const;
 
