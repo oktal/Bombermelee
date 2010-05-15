@@ -136,25 +136,9 @@ void CGameBoard::OnUpdate()
     CPlayer *me = m_playersList[0]; /* I am the first player of the list */
     std::string pos = QString("%1 %2").arg(me->GetPosition().x).arg(me->GetPosition().y)
                                       .toStdString();
-    if (me->gotBonus)
+    if (me->isDead())
     {
-        unsigned x = me->getX();
-        unsigned y = me->getY();
-        if (m_bonusCanvas == NULL)
-        {
-            m_bonusCanvas = new CBonusCanvas(0.1f, 4.0f, sf::Rect<int>(535, 320,605, 390));
-            m_map.setBlock(x, y, Floor);
-            QSound::play("../bonus.wav");
-        }
-        else if (m_bonusCanvas->isFinished())
-        {
-            m_bonusCanvas->Reset();
-            m_bonusCanvas->Play();
-            m_map.setBlock(x, y, Floor);
-            QSound::play("../bonus.wav");
-        }
-        qDebug() << "You got a Bonus";
-        me->gotBonus = false;
+        return;
     }
 
     sf::Event event;
@@ -181,15 +165,23 @@ void CGameBoard::OnUpdate()
     if (GetInput().IsKeyDown(sf::Key::Right) ||
         GetInput().IsKeyDown(sf::Key::D))
     {
-        if (me->canMove(Right, m_map))
+        switch (me->getCollision(Right, m_map))
         {
+        case Floor:
+        case Bonus:
             if (me->getDirection() != Right)
             {
                 send(m_socket , "MOVE " + me->getNick() + " RIGHT " + pos);
                 me->setDirection(Right);
                 qDebug() << "RIGHT";
             }
+            break;
+        case Bomb:
+            break;
+        default:
+            break;
         }
+
         if (me->IsPaused())
         {
             me->Play();
@@ -198,15 +190,23 @@ void CGameBoard::OnUpdate()
      else if (GetInput().IsKeyDown(sf::Key::Left) ||
               GetInput().IsKeyDown(sf::Key::Q))
      {
-         if (me->canMove(Left, m_map))
+         switch (me->getCollision(Left, m_map))
          {
+         case Floor:
+         case Bonus:
               if (me->getDirection() != Left)
               {
                   me->setDirection(Left);
                   send(m_socket , "MOVE " + me->getNick() + " LEFT " + pos);
                   qDebug() << "LEFT";
               }
+              break;
+         case Bomb:
+              break;
+         default:
+              break;
          }
+
          if (me->IsPaused())
          {
              me->Play();
@@ -215,15 +215,23 @@ void CGameBoard::OnUpdate()
      else if (GetInput().IsKeyDown(sf::Key::Down) ||
               GetInput().IsKeyDown(sf::Key::S))
      {
-         if (me->canMove(Down, m_map))
+         switch (me->getCollision(Down, m_map))
          {
-              if (me->getDirection() != Down)
+         case Floor:
+         case Bonus:
+             if (me->getDirection() != Down)
               {
                    me->setDirection(Down);
                    send(m_socket , "MOVE " + me->getNick() + " DOWN " + pos);
                    qDebug() << "DOWN";
               }
+             break;
+         case Bomb:
+             break;
+         default:
+             break;
          }
+
          if (me->IsPaused())
          {
              me->Play();
@@ -233,15 +241,23 @@ void CGameBoard::OnUpdate()
      else if (GetInput().IsKeyDown(sf::Key::Up) ||
               GetInput().IsKeyDown(sf::Key::Z))
      {
-         if (me->canMove(Up, m_map))
+         switch (me->getCollision(Up, m_map))
          {
+         case Floor:
+         case Bonus:
                if (me->getDirection() != Up)
                {
                     send(m_socket, "MOVE " + me->getNick() + " UP " + pos);
                     me->setDirection(Up);
                     qDebug() << "UP";
                }
+               break;
+         case Bomb:
+               break;
+         default:
+             break;
          }
+
          if (me->IsPaused())
          {
              me->Play();
@@ -289,8 +305,6 @@ void CGameBoard::drawMap()
             case Player:
                 break;
             case Bomb:
-                //m_bomb.SetPosition((34 * i) + 6, (34 * j) + 6);
-                //Draw(m_bomb);
                 break;
             default:
                 break;
@@ -322,20 +336,52 @@ void CGameBoard::drawPlayers()
     {
         CPlayer *player = m_playersList[i];
         player->updateBonusTime(GetFrameTime());
-        if (player->gotBonus && i != 0)
-        {
-            unsigned x = player->getX();
-            unsigned y = player->getY();
-            m_map.setBlock(x, y, Floor);
-            QSound::play("../bonus.wav");
-            player->gotBonus = false;
-        }
 
         if (player->getDirection() != Stopped)
         {
-            if (player->canMove(player->getDirection(), m_map))
+            unsigned x = player->getX();
+            unsigned y = player->getY();
+
+            switch (player->getCollision(player->getDirection(), m_map))
             {
+            case Floor:
                 player->move(player->getDirection(), GetFrameTime());
+                break;
+            case Box:
+            case BonusBox:
+            case Wall:
+                break;
+            case Bonus:
+                if (i == 0) /* If I got the bonus */
+                {
+                    if (m_bonusCanvas == NULL)
+                    {
+                        m_bonusCanvas = new CBonusCanvas(0.1f, 4.0f, sf::Rect<int>(535, 320,605, 390));
+                        m_map.setBlock(x, y, Floor);
+                        QSound::play("../bonus.wav");
+                    }
+                    else if (m_bonusCanvas->isFinished())
+                    {
+                        m_bonusCanvas->Reset();
+                        m_bonusCanvas->Play();
+                        m_map.setBlock(x, y, Floor);
+                        QSound::play("../bonus.wav");
+                    }
+                    else
+                    {
+                        if (player->getCollision(player->getDirection(), m_map) != Wall &&
+                            player->getCollision(player->getDirection(), m_map) != Box &&
+                            player->getCollision(player->getDirection(), m_map) != BonusBox)
+                        {
+                            player->move(player->getDirection(), GetFrameTime());
+                        }
+                    }
+                }
+                break;
+            case Bomb:
+                break;
+            default:
+                break;
             }
         }
 
@@ -384,7 +430,6 @@ void CGameBoard::drawExplosions()
             if (collision(*particles[j], *me))
             {
                 me->explode();
-                me->setKiller((*it)->getBomber());
                 me->setDirection(Stopped);
                 if (me->IsPaused())
                 {

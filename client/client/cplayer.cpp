@@ -196,146 +196,203 @@ const std::string &CPlayer::getNick() const
   * Tell if the player can move or not
   * @param direction Left, Right, Up or Down
   * @map map current map
-  * @return true if the player can move, false if not
+  * @return the collisioning block
 */
 
-bool CPlayer::canMove(Direction direction, CMap &map)
+BlockType CPlayer::getCollision(Direction direction, CMap &map)
 {
-    if (m_dead)
-    {
-        return false;
-    }
     int _x = GetPosition().x, _y = GetPosition().y;
     /* In which block are we ? */
-    unsigned x = (_x + GetSubRect().GetWidth() / 2) / BLOCK_SIZE;
-    unsigned y = (_y + GetSubRect().GetHeight() / 2) / BLOCK_SIZE;
+    unsigned x = getX();
+    unsigned y = getY();
     sf::Sprite tmp;
     CImageManager *imageManager = CImageManager::GetInstance();
+    BlockType block = Floor;
     switch (direction)
-    {
-    case Up:
-        if (_y <= 0) /* Out of the map ? */
         {
-            return false;
-        }
-        if (map.getBlock(x, y - 1) == Wall ||
-            map.getBlock(x, y - 1) == Box ||
-            map.getBlock(x, y - 1) == BonusBox)
-        {
-            tmp.SetImage(*imageManager->GetImage("../mur.png"));
-            tmp.SetPosition(x * BLOCK_SIZE, (y - 1) * BLOCK_SIZE);
-        }
-        else if (map.getBlock(x, y - 1) == Bomb)
-        {
-            tmp.SetImage(*imageManager->GetImage("../bomb.png"));
-            tmp.SetPosition((x * BLOCK_SIZE) + 6, ((y - 1) * BLOCK_SIZE) + 6);
-        }
-        else if (map.getBlock(x, y) == Bonus)
-        {
-            tmp.SetImage(*imageManager->GetImage("../bonus.png"));
-            tmp.SetPosition((x * BLOCK_SIZE) + 5, ((y) * BLOCK_SIZE) + 5);
-            gotBonus = collision(*this, tmp, 0);
-            return true;
+        case Up:
+            if (_y <= 0) /* Out of the map ? */
+            {
+                return Wall;
+            }
+            if (map.getBlock(x, y) == Bonus)
+            {
+                if (map.getBlock(x, y - 1) == Wall ||
+                    map.getBlock(x, y - 1) == Box ||
+                    map.getBlock(x, y - 1) == BonusBox)
+                {
+                    tmp.SetImage(*imageManager->GetImage("../mur.png"));
+                    tmp.SetPosition(x * BLOCK_SIZE, (y - 1) * BLOCK_SIZE);
+                    block = map.getBlock(x, y - 1);
+                    if (!collision(*this, tmp))
+                    {
+                        tmp.SetImage(*imageManager->GetImage("../bonus.png"));
+                        tmp.SetPosition((x * BLOCK_SIZE) + 5, ((y) * BLOCK_SIZE) + 5);
+                        block = Bonus;
+                    }
+                }
+                else
+                {
+                    tmp.SetImage(*imageManager->GetImage("../bonus.png"));
+                    tmp.SetPosition((x * BLOCK_SIZE) + 5, ((y) * BLOCK_SIZE) + 5);
+                    block = Bonus;
+                }
+            }
+            else if (map.getBlock(x, y - 1) == Wall ||
+                map.getBlock(x, y - 1) == Box ||
+                map.getBlock(x, y - 1) == BonusBox)
+            {
+                tmp.SetImage(*imageManager->GetImage("../mur.png"));
+                tmp.SetPosition(x * BLOCK_SIZE, (y - 1) * BLOCK_SIZE);
+                block = map.getBlock(x, y - 1);
+            }
+            else if (map.getBlock(x, y - 1) == Bomb)
+            {
+                 tmp.SetImage(*imageManager->GetImage("../bomb.png"));
+                 tmp.SetPosition((x * BLOCK_SIZE) + 6, ((y - 1) * BLOCK_SIZE) + 6);
+                 block = Bomb;
+            }
+            break;
+        case Down:
+            if (static_cast<unsigned>(_y + GetSubRect().GetHeight()) >=
+                BLOCK_SIZE * MAP_HEIGHT) /* Out of the map ? */
+            {
+                return Wall;
+            }
+            if (map.getBlock(x, y) == Bonus)
+            {
+                if (map.getBlock(x, y + 1) == Wall ||
+                    map.getBlock(x, y + 1) == Box ||
+                    map.getBlock(x, y + 1) == BonusBox)
+                {
+                    tmp.SetImage(*imageManager->GetImage("../mur.png"));
+                    tmp.SetPosition(x * BLOCK_SIZE, (y + 1) * BLOCK_SIZE);
+                    block = map.getBlock(x, y + 1);
+                    if (!collision(*this, tmp))
+                    {
+                        tmp.SetImage(*imageManager->GetImage("../bonus.png"));
+                        tmp.SetPosition((x * BLOCK_SIZE) + 5, ((y) * BLOCK_SIZE) + 5);
+                        block = Bonus;
+                    }
+                }
+                else
+                {
+                    tmp.SetImage(*imageManager->GetImage("../bonus.png"));
+                    tmp.SetPosition((x * BLOCK_SIZE) + 5, ((y) * BLOCK_SIZE) + 5);
+                    block = Bonus;
+                }
+            }
+            else if (map.getBlock(x, y + 1) == Wall ||
+                map.getBlock(x, y + 1) == Box ||
+                map.getBlock(x, y + 1) == BonusBox)
+            {
+                tmp.SetImage(*imageManager->GetImage("../mur.png"));
+                tmp.SetPosition(x * BLOCK_SIZE, (y + 1) * BLOCK_SIZE);
+                block = map.getBlock(x, y + 1);
+            }
+            else if (map.getBlock(x, y + 1) == Bomb)
+            {
+                tmp.SetImage(*imageManager->GetImage("../bomb.png"));
+                tmp.SetPosition((x * BLOCK_SIZE) + 6, ((y + 1) * BLOCK_SIZE) + 6);
+                block = Bomb;
+            }
+            break;
+        case Left:
+            if (_x <= 0) /* Out of the map ? */
+            {
+                return Wall;
+            }
+            if (map.getBlock(x, y) == Bonus)
+            {
+                if (map.getBlock(x - 1, y) == Wall ||
+                    map.getBlock(x - 1, y) == Box ||
+                    map.getBlock(x - 1, y) == BonusBox)
+                {
+                    tmp.SetImage(*imageManager->GetImage("../mur.png"));
+                    tmp.SetPosition((x - 1) * BLOCK_SIZE, y * BLOCK_SIZE);
+                    block = map.getBlock(x - 1, y);
+                    if (!collision(*this, tmp))
+                    {
+                        tmp.SetImage(*imageManager->GetImage("../bonus.png"));
+                        tmp.SetPosition((x * BLOCK_SIZE) + 5, ((y) * BLOCK_SIZE) + 5);
+                        block = Bonus;
+                    }
+                }
+                else
+                {
+                    tmp.SetImage(*imageManager->GetImage("../bonus.png"));
+                    tmp.SetPosition((x * BLOCK_SIZE) + 5, ((y) * BLOCK_SIZE) + 5);
+                    block = Bonus;
+                }
+            }
+            else if (map.getBlock(x - 1, y) == Wall ||
+                map.getBlock(x - 1, y) == Box ||
+                map.getBlock(x - 1, y) == BonusBox)
+            {
+                tmp.SetImage(*imageManager->GetImage("../mur.png"));
+                tmp.SetPosition((x - 1) * BLOCK_SIZE, y * BLOCK_SIZE);
+                block = map.getBlock(x - 1, y);
+            }
+            else if (map.getBlock(x - 1, y) == Bomb)
+            {
+                tmp.SetImage(*imageManager->GetImage("../bomb.png"));
+                tmp.SetPosition(((x - 1) * BLOCK_SIZE) + 6, (y * BLOCK_SIZE) + 6);
+                block = Bomb;
+            }
+            break;
+        case Right:
+            if (static_cast<unsigned>(_x + GetSubRect().GetWidth()) >=
+                BLOCK_SIZE * MAP_WIDTH) /* Out of the map ? */
+            {
+                return Wall;
+            }
+            if (map.getBlock(x, y) == Bonus)
+            {
+                if (map.getBlock(x + 1, y) == Wall ||
+                    map.getBlock(x + 1, y) == Box ||
+                    map.getBlock(x + 1, y) == BonusBox)
+                {
+                    tmp.SetImage(*imageManager->GetImage("../mur.png"));
+                    tmp.SetPosition((x + 1) * BLOCK_SIZE, y * BLOCK_SIZE);
+                    block = map.getBlock(x + 1, y);
+                    if (!collision(*this, tmp))
+                    {
+                        tmp.SetImage(*imageManager->GetImage("../bonus.png"));
+                        tmp.SetPosition((x * BLOCK_SIZE) + 5, ((y) * BLOCK_SIZE) + 5);
+                        block = Bonus;
+                    }
+                }
+                else
+                {
+                    tmp.SetImage(*imageManager->GetImage("../bonus.png"));
+                    tmp.SetPosition((x * BLOCK_SIZE) + 5, ((y) * BLOCK_SIZE) + 5);
+                    block = Bonus;
+                }
+            }
+            else if (map.getBlock(x + 1, y) == Wall ||
+                map.getBlock(x + 1, y) == Box ||
+                map.getBlock(x + 1, y) == BonusBox)
+            {
+                tmp.SetImage(*imageManager->GetImage("../mur.png"));
+                tmp.SetPosition((x + 1) * BLOCK_SIZE, y * BLOCK_SIZE);
+                block = map.getBlock(x + 1, y);
+            }
+            else if (map.getBlock(x + 1, y) == Bomb)
+            {
+                tmp.SetImage(*imageManager->GetImage("../bomb.png"));
+                tmp.SetPosition(((x + 1) * BLOCK_SIZE) + 6, (y * BLOCK_SIZE) + 6);
+                block = Bomb;
+            }
+            break;
+        default:
+            break;
         }
 
-        else if (map.getBlock(x, y - 1) == Floor)
-        {
-            return true;
-        }
-        break;            
-    case Down:
-        if (static_cast<unsigned>(_y + GetSubRect().GetHeight()) >=
-            BLOCK_SIZE * MAP_HEIGHT) /* Out of the map ? */
-        {
-            return false;
-        }
-        if (map.getBlock(x, y + 1) == Wall ||
-            map.getBlock(x, y + 1) == Box ||
-            map.getBlock(x, y + 1) == BonusBox)
-        {
-            tmp.SetImage(*imageManager->GetImage("../mur.png"));
-            tmp.SetPosition(x * BLOCK_SIZE, (y + 1) * BLOCK_SIZE);
-        }
-        else if (map.getBlock(x, y + 1) == Bomb)
-        {
-            tmp.SetImage(*imageManager->GetImage("../bomb.png"));
-            tmp.SetPosition((x * BLOCK_SIZE) + 6, ((y + 1) * BLOCK_SIZE) + 6);
-        }
-        else if (map.getBlock(x, y) == Bonus)
-        {
-            tmp.SetImage(*imageManager->GetImage("../bonus.png"));
-            tmp.SetPosition((x * BLOCK_SIZE) + 5, ((y) * BLOCK_SIZE) + 5);
-            gotBonus = collision(*this, tmp, 0);
-            return true;
-        }
-        else if (map.getBlock(x, y + 1) == Floor)
-        {
-            return true;
-        }
-        break;
-    case Left:
-        if (_x <= 0) /* Out of the map ? */
-        {
-            return false;
-        }
-        if (map.getBlock(x - 1, y) == Wall ||
-            map.getBlock(x - 1, y) == Box ||
-            map.getBlock(x - 1, y) == BonusBox)
-        {
-            tmp.SetImage(*imageManager->GetImage("../mur.png"));
-            tmp.SetPosition((x - 1) * BLOCK_SIZE, y * BLOCK_SIZE);
-        }
-        else if (map.getBlock(x - 1, y) == Bomb)
-        {
-            tmp.SetImage(*imageManager->GetImage("../bomb.png"));
-            tmp.SetPosition(((x - 1) * BLOCK_SIZE) + 6, (y * BLOCK_SIZE) + 6);
-        }
-        else if (map.getBlock(x, y) == Bonus)
-        {
-            tmp.SetImage(*imageManager->GetImage("../bonus.png"));
-            tmp.SetPosition(((x) * BLOCK_SIZE) + 5, (y * BLOCK_SIZE) + 5);
-            gotBonus = collision(*this, tmp, 0);
-            return true;
-        }
-        else if (map.getBlock(x - 1, y) == Floor)
-        {
-            return true;
-        }
-        break;
-    case Right:
-        if (static_cast<unsigned>(_x + GetSubRect().GetWidth()) >=
-            BLOCK_SIZE * MAP_WIDTH) /* Out of the map ? */
-        {
-            return false;
-        }
-        if (map.getBlock(x + 1, y) == Wall ||
-            map.getBlock(x + 1, y) == Box ||
-            map.getBlock(x + 1, y) == BonusBox)
-        {
-            tmp.SetImage(*imageManager->GetImage("../mur.png"));
-            tmp.SetPosition((x + 1) * BLOCK_SIZE, y * BLOCK_SIZE);
-        }
-        else if (map.getBlock(x + 1, y) == Bomb)
-        {
-            tmp.SetImage(*imageManager->GetImage("../bomb.png"));
-            tmp.SetPosition(((x + 1) * BLOCK_SIZE) + 6, (y * BLOCK_SIZE) + 6);
-        }
-        else if (map.getBlock(x, y) == Bonus)
-        {
-            tmp.SetImage(*imageManager->GetImage("../bonus.png"));
-            tmp.SetPosition(((x) * BLOCK_SIZE) + 5, (y * BLOCK_SIZE) + 5);
-            gotBonus = collision(*this, tmp, 0);
-            return true;
-        }
-        else if (map.getBlock(x + 1, y) == Floor)
-        {
-            return true;
-        }
-        break;
-    default:
-        break;
+    if (block == Floor)
+    {
+        return block;
     }
-    return !collision(*this, tmp);
+    return collision(*this, tmp) ? block : Floor;
 }
 
 

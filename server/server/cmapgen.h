@@ -8,7 +8,7 @@ static const unsigned MAP_HEIGHT  = 15;
 
 static const unsigned SPACE = 2; // Minimal number of space to get from border of the map
 static const unsigned PRC_BOX = 70; // Percentage of chance to get a 'Box'
-static const unsigned PRC_BONUS = 10; // Percentage of chance to get a 'Bonus'
+static const unsigned PRC_BONUS = 40; // Percentage of chance to get a 'Bonus'
 
 class CMapGen
 {

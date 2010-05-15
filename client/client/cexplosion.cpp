@@ -36,17 +36,18 @@ CExplosion::CExplosion(unsigned x, unsigned y, unsigned range,
         {
             break;
         }
-        else if (x - i == 0)
-        {
-            m_particles.push_back(new CParticle(CParticle::HorizontalLeft, x - i, y,
-                                                    explosion));
-            break;
-        }
         else if (map.getBlock(x - i, y) == Box ||
+                 map.getBlock(x - i, y) == BonusBox ||
                  i == range)
         {
             m_particles.push_back(new CParticle(CParticle::HorizontalLeft, x - i, y,
                                                 explosion));
+            break;
+        }
+        else if (x - i == 0)
+        {
+            m_particles.push_back(new CParticle(CParticle::HorizontalLeft, x - i, y,
+                                                    explosion));
             break;
         }
         else
@@ -64,17 +65,18 @@ CExplosion::CExplosion(unsigned x, unsigned y, unsigned range,
         {
             break;
         }
-        else if (x + i == MAP_WIDTH - 1)
-        {
-            m_particles.push_back(new CParticle(CParticle::HorizontalRight, x + i, y,
-                                                    explosion));
-            break;
-        }
         else if (map.getBlock(x + i, y) == Box ||
+                 map.getBlock(x + i, y) == BonusBox ||
                  i == range)
         {
             m_particles.push_back(new CParticle(CParticle::HorizontalRight, x + i, y,
                                                 explosion));
+            break;
+        }
+        else if (x + i == MAP_WIDTH - 1)
+        {
+            m_particles.push_back(new CParticle(CParticle::HorizontalRight, x + i, y,
+                                                    explosion));
             break;
         }
         else
@@ -91,14 +93,15 @@ CExplosion::CExplosion(unsigned x, unsigned y, unsigned range,
         {
             break;
         }
-        else if (y - i == 0)
+        else if (map.getBlock(x, y - i) == Box ||
+                 map.getBlock(x, y - i) == BonusBox ||
+                 i == range)
         {
             m_particles.push_back(new CParticle(CParticle::VerticalUp, x, y - i,
                                                 explosion));
             break;
         }
-        else if (map.getBlock(x, y - i) == Box ||
-                 i == range)
+        else if (y - i == 0)
         {
             m_particles.push_back(new CParticle(CParticle::VerticalUp, x, y - i,
                                                 explosion));
@@ -118,14 +121,15 @@ CExplosion::CExplosion(unsigned x, unsigned y, unsigned range,
         {
             break;
         }
-        else if (y + i == MAP_HEIGHT)
+        else if (map.getBlock(x, y + i) == Box ||
+                 map.getBlock(x, y + i) == BonusBox ||
+                 i == range)
         {
             m_particles.push_back(new CParticle(CParticle::VerticalDown, x, y + i,
                                                 explosion));
             break;
         }
-        else if (map.getBlock(x, y + i) == Box ||
-                 i == range)
+        else if (y + i == MAP_HEIGHT)
         {
             m_particles.push_back(new CParticle(CParticle::VerticalDown, x, y + i,
                                                 explosion));

@@ -272,7 +272,7 @@ void CServer::processData(QTcpSocket *sender)
             CBomb *bomb;
             if (l[4] == "NORMAL")
             {
-                bomb = new CBomb(l[1], x, y, ExplodeTime);
+                bomb = new CBomb(l[1], x, y);
             }
             else
             {
