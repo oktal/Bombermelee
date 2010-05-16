@@ -6,6 +6,7 @@
 #include <list>
 #include <iostream>
 #include <typeinfo>
+#include <algorithm>
 
 /*
 This file is part of Bombermelee.
@@ -217,26 +218,9 @@ BlockType CPlayer::getCollision(Direction direction, CMap &map)
             }
             if (map.getBlock(x, y) == Bonus)
             {
-                if (map.getBlock(x, y - 1) == Wall ||
-                    map.getBlock(x, y - 1) == Box ||
-                    map.getBlock(x, y - 1) == BonusBox)
-                {
-                    tmp.SetImage(*imageManager->GetImage("../mur.png"));
-                    tmp.SetPosition(x * BLOCK_SIZE, (y - 1) * BLOCK_SIZE);
-                    block = map.getBlock(x, y - 1);
-                    if (!collision(*this, tmp))
-                    {
-                        tmp.SetImage(*imageManager->GetImage("../bonus.png"));
-                        tmp.SetPosition((x * BLOCK_SIZE) + 5, ((y) * BLOCK_SIZE) + 5);
-                        block = Bonus;
-                    }
-                }
-                else
-                {
-                    tmp.SetImage(*imageManager->GetImage("../bonus.png"));
-                    tmp.SetPosition((x * BLOCK_SIZE) + 5, ((y) * BLOCK_SIZE) + 5);
-                    block = Bonus;
-                }
+                tmp.SetImage(*imageManager->GetImage("../bonus.png"));
+                tmp.SetPosition((x * BLOCK_SIZE) + 5, ((y) * BLOCK_SIZE) + 5);
+                block = Bonus;
             }
             else if (map.getBlock(x, y - 1) == Wall ||
                 map.getBlock(x, y - 1) == Box ||
@@ -261,26 +245,9 @@ BlockType CPlayer::getCollision(Direction direction, CMap &map)
             }
             if (map.getBlock(x, y) == Bonus)
             {
-                if (map.getBlock(x, y + 1) == Wall ||
-                    map.getBlock(x, y + 1) == Box ||
-                    map.getBlock(x, y + 1) == BonusBox)
-                {
-                    tmp.SetImage(*imageManager->GetImage("../mur.png"));
-                    tmp.SetPosition(x * BLOCK_SIZE, (y + 1) * BLOCK_SIZE);
-                    block = map.getBlock(x, y + 1);
-                    if (!collision(*this, tmp))
-                    {
-                        tmp.SetImage(*imageManager->GetImage("../bonus.png"));
-                        tmp.SetPosition((x * BLOCK_SIZE) + 5, ((y) * BLOCK_SIZE) + 5);
-                        block = Bonus;
-                    }
-                }
-                else
-                {
-                    tmp.SetImage(*imageManager->GetImage("../bonus.png"));
-                    tmp.SetPosition((x * BLOCK_SIZE) + 5, ((y) * BLOCK_SIZE) + 5);
-                    block = Bonus;
-                }
+                tmp.SetImage(*imageManager->GetImage("../bonus.png"));
+                tmp.SetPosition((x * BLOCK_SIZE) + 5, ((y) * BLOCK_SIZE) + 5);
+                block = Bonus;
             }
             else if (map.getBlock(x, y + 1) == Wall ||
                 map.getBlock(x, y + 1) == Box ||
@@ -304,26 +271,9 @@ BlockType CPlayer::getCollision(Direction direction, CMap &map)
             }
             if (map.getBlock(x, y) == Bonus)
             {
-                if (map.getBlock(x - 1, y) == Wall ||
-                    map.getBlock(x - 1, y) == Box ||
-                    map.getBlock(x - 1, y) == BonusBox)
-                {
-                    tmp.SetImage(*imageManager->GetImage("../mur.png"));
-                    tmp.SetPosition((x - 1) * BLOCK_SIZE, y * BLOCK_SIZE);
-                    block = map.getBlock(x - 1, y);
-                    if (!collision(*this, tmp))
-                    {
-                        tmp.SetImage(*imageManager->GetImage("../bonus.png"));
-                        tmp.SetPosition((x * BLOCK_SIZE) + 5, ((y) * BLOCK_SIZE) + 5);
-                        block = Bonus;
-                    }
-                }
-                else
-                {
-                    tmp.SetImage(*imageManager->GetImage("../bonus.png"));
-                    tmp.SetPosition((x * BLOCK_SIZE) + 5, ((y) * BLOCK_SIZE) + 5);
-                    block = Bonus;
-                }
+                tmp.SetImage(*imageManager->GetImage("../bonus.png"));
+                tmp.SetPosition((x * BLOCK_SIZE) + 5, ((y) * BLOCK_SIZE) + 5);
+                block = Bonus;
             }
             else if (map.getBlock(x - 1, y) == Wall ||
                 map.getBlock(x - 1, y) == Box ||
@@ -348,26 +298,9 @@ BlockType CPlayer::getCollision(Direction direction, CMap &map)
             }
             if (map.getBlock(x, y) == Bonus)
             {
-                if (map.getBlock(x + 1, y) == Wall ||
-                    map.getBlock(x + 1, y) == Box ||
-                    map.getBlock(x + 1, y) == BonusBox)
-                {
-                    tmp.SetImage(*imageManager->GetImage("../mur.png"));
-                    tmp.SetPosition((x + 1) * BLOCK_SIZE, y * BLOCK_SIZE);
-                    block = map.getBlock(x + 1, y);
-                    if (!collision(*this, tmp))
-                    {
-                        tmp.SetImage(*imageManager->GetImage("../bonus.png"));
-                        tmp.SetPosition((x * BLOCK_SIZE) + 5, ((y) * BLOCK_SIZE) + 5);
-                        block = Bonus;
-                    }
-                }
-                else
-                {
-                    tmp.SetImage(*imageManager->GetImage("../bonus.png"));
-                    tmp.SetPosition((x * BLOCK_SIZE) + 5, ((y) * BLOCK_SIZE) + 5);
-                    block = Bonus;
-                }
+                tmp.SetImage(*imageManager->GetImage("../bonus.png"));
+                tmp.SetPosition((x * BLOCK_SIZE) + 5, ((y) * BLOCK_SIZE) + 5);
+                block = Bonus;
             }
             else if (map.getBlock(x + 1, y) == Wall ||
                 map.getBlock(x + 1, y) == Box ||
@@ -472,7 +405,6 @@ void CPlayer::addBonus(CBonus *bonus)
     if (getBonus(bonus->getType()) == NULL)
     {
         m_bonusList.push_back(bonus);
-        std::cout << "Bonus added" << std::endl;
     }
     switch (bonus->getType())
     {
@@ -480,15 +412,19 @@ void CPlayer::addBonus(CBonus *bonus)
         m_speed *= 2;
         m_oldStopTime = m_stopTime;
         m_stopTime = 0.0f;
+        removeBonus(CBonus::SpeedDown);
         break;
     case CBonus::SpeedDown:
         m_speed /= 2;
+        m_stopTime = m_oldStopTime;
+        removeBonus(CBonus::SpeedUp);
         break;
     case CBonus::BombUp:
         if (maxBombs < MaxBombs)
         {
             maxBombs++;
         }
+        removeBonus(CBonus::BombDown);
         break;
     case CBonus::BombDown:
         if (maxBombs > 1)
@@ -501,12 +437,19 @@ void CPlayer::addBonus(CBonus *bonus)
         {
             bombRange++;
         }
+        removeBonus(CBonus::FireDown);
         break;
     case CBonus::FireDown:
         if (bombRange > 1)
         {
             bombRange--;
         }
+        removeBonus(CBonus::FireUp);
+        break;
+    case CBonus::FullFire:
+        bombRange = MaxRange;
+        removeBonus(CBonus::FireDown);
+        removeBonus(CBonus::FireUp);
         break;
     default:
         break;
@@ -522,7 +465,7 @@ void CPlayer::removeBonus(CBonus::BonusType type)
         if (bonus->getType() == type)
         {
             delete bonus;
-            m_bonusList.erase(it);
+            it = m_bonusList.erase(it);
             break;
         }
         else

@@ -34,8 +34,8 @@ public:
     void playerLeft(const std::string &nick);
     void playerMove(const std::string &nick, const std::string &move, const float x, const float y);
     void playerGotBonus(const std::string &nick, const std::string &bonus);
+    void remoteExplode(const std::string &bomber, unsigned x, unsigned y);
     void setMap(std::string map);
-    void bombExplode(const std::string &bomber, unsigned x, unsigned y);
     void plantedBomb(const std::string &bomber, unsigned x, unsigned y,
                      const std::string &type);
     void setConnected(bool connected);
@@ -58,7 +58,6 @@ private:
     /* Images and Sprites */
     sf::Sprite m_wall;
     sf::Sprite m_box;
-    sf::Sprite m_bomb;
     sf::Sprite m_bonus;
     sf::Image m_explosion;
 

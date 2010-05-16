@@ -17,7 +17,8 @@ public:
         BombUp, BombDown,
         FireUp, FireDown, FullFire,
         SpeedUp, SpeedDown,
-        RemoteMine
+        RemoteMine,
+        BombPass, BombKick
     };
 
     CBonus(BonusType type);

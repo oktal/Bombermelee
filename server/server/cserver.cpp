@@ -27,6 +27,17 @@ static const quint16 DefaultPort = 45000;
 static const quint16 MaximumSlots = 4; /* 4 Players maximum */
 static const QChar SeparatorToken = ' ';
 
+static void send(QTcpSocket *to, const std::string &what)
+{
+    const qint64 len = what.length() + 2;
+    qint64 bytesWritten;
+    do
+    {
+        bytesWritten = to->write(_m(what));
+        to->waitForBytesWritten();
+    } while (bytesWritten != len);
+}
+
 CServer::CServer(QWidget *parent) :
     QMainWindow(parent)
 {
@@ -236,7 +247,7 @@ void CServer::processData(QTcpSocket *sender)
             QString color = m_colors[rand() % m_colors.size()];
             CClient *newClient = new CClient(sender, l[1], color);
             m_colors.removeOne(color);
-            send(sender, "OK " + color);
+            send(sender, "OK " + color.toStdString());
             appendToConsole(tr("<strong>%1</strong> has joined").arg(l[1]));
             m_clientsList.append(newClient);
             broadcast("JOIN " + l[1] + " " + color, sender);
@@ -254,7 +265,7 @@ void CServer::processData(QTcpSocket *sender)
                     response += " ";
                 }
              }
-            send(sender, response);
+            send(sender, response.toStdString());
         }
         break;
     case Say:
@@ -265,43 +276,13 @@ void CServer::processData(QTcpSocket *sender)
         broadcast(QString(m_buffer.data()), sender);
         break;
     case Bomb:
-        {
-            unsigned x = strtol(l[2].toStdString().c_str(), NULL, 10);
-            unsigned y = strtol(l[3].toStdString().c_str(), NULL, 10);
-            QString type = l[4];
-            CBomb *bomb;
-            if (l[4] == "NORMAL")
-            {
-                bomb = new CBomb(l[1], x, y);
-            }
-            else
-            {
-                bomb = new CBomb(l[1], x, y, ExplodeTimeRemote);
-            }
-            m_bombsList.enqueue(bomb);
-            QObject::connect(bomb, SIGNAL(explode()), this, SLOT(bombExplode()));
-            broadcast(QString(m_buffer.data()), sender);
-        }
+        broadcast(QString(m_buffer.data()), sender);
         break;
     case Bonus:
         broadcast(QString(m_buffer.data()), sender);
         break;
     case Boom:
         broadcast(QString(m_buffer.data()), sender);
-        {
-            unsigned x = strtol(l[2].toStdString().c_str(), NULL, 10);
-            unsigned y = strtol(l[3].toStdString().c_str(), NULL, 10);
-            for (int i = 0; i < m_bombsList.size(); ++i)
-            {
-                CBomb *bomb = m_bombsList[i];
-                if (bomb->x == x && bomb->y == y)
-                {
-                    bomb->stopTimer();
-                    m_bombsList.removeAt(i);
-                    break;
-                }
-            }
-        }
         break;
     case Pong:
     case Undefined:
@@ -354,19 +335,6 @@ void CServer::sendMapToClients()
     broadcast(QString(request.c_str()), NULL);
 }
 
-void CServer::bombExplode()
-{
-    CBomb *bomb = qobject_cast<CBomb *>(sender());
-    QString bomber = bomb->bomber;
-    unsigned x = bomb->x;
-    unsigned y = bomb->y;
-    m_bombsList.removeOne(bomb);
-    delete bomb;
-
-    QString request = QString("BOOM %1 %2 %3").arg(bomber).arg(x).arg(y);
-    broadcast(request, NULL);
-}
-
 bool CServer::nickAlreadyInUse(const QString &nick)
 {
     return getClientFromNick(nick) != NULL;
@@ -377,14 +345,6 @@ void CServer::appendToConsole(const QString &text)
     m_console->append(text);
 }
 
-void CServer::send(QTcpSocket *to, const QString &what)
-{
-    const qint64 len = what.length() + 2;
-    while (to->write(_m(what.toStdString())) != len)
-    {
-
-    }
-}
 
 CServer::~CServer()
 {
