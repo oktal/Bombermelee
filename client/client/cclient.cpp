@@ -277,28 +277,24 @@ void CClient::processData()
         {
             unsigned x = strtol(l[2].toStdString().c_str(), NULL, 10);
             unsigned y = strtol(l[3].toStdString().c_str(), NULL, 10);
-            m_gameBoard->bombExplode(l[1].toStdString(), x, y);
+            m_gameBoard->remoteExplode(l[1].toStdString(), x, y);
         }
         break;
     case Bonus:
         m_gameBoard->playerGotBonus(l[1].toStdString(), l[2].toStdString());
         {
             QString type = "";
-            if (l[2] == "SPEEDUP")
+            QStringList bonusList, malusList;
+            bonusList << "SPEEDUP" << "BOMBUP" << "FIREUP" << "FULLFIRE" << "REMOTEMINE"
+                      << "BOMBKICK" << "BOMBPASS";
+            malusList << "SPEEDOWN" << "BOMBDOWN" << "FIREDOWN";
+            if(bonusList.contains(l[2]))
             {
                 type = "Bonus";
             }
-            else if (l[2] == "SPEEDDOWN")
+            else if (malusList.contains(l[2]))
             {
                 type = "Malus";
-            }
-            else if (l[2] == "BOMBUP")
-            {
-                type = "Bonus";
-            }
-            else if (l[2] == "REMOTEMINE")
-            {
-                type = "Bonus";
             }
             appendToChatBox(tr("<font color='blue'><em>%1 has got <strong>%2</strong> %3</em></font>")
                             .arg(l[1]).arg(l[2]).arg(type));

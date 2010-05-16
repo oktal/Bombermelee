@@ -31,6 +31,9 @@ std::string CBonus::toString() const
     case FireDown:
         return "Fire Down";
         break;
+    case FullFire:
+        return "Full Fire";
+        break;
     case BombUp:
         return "Bomb Up";
         break;
@@ -40,8 +43,13 @@ std::string CBonus::toString() const
     case RemoteMine:
         return "Remote Mine";
         break;
+    case BombPass:
+        return "Bomb Pass";
+        break;
+    case BombKick:
+        return "Bomb Kick";
+        break;
     default:
         return "";
-        break;
     }
 }

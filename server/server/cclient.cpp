@@ -34,8 +34,10 @@ void CClient::setNick(const QString &nick)
 void CClient::send(const std::string &what)
 {
     const qint64 len = what.length() + 2;
-    while (m_socket->write(_m(what)) != len)
+    qint64 bytesWritten;
+    do
     {
-
-    }
+        bytesWritten = m_socket->write(_m(what));
+        m_socket->waitForBytesWritten();
+    } while (bytesWritten != len);
 }

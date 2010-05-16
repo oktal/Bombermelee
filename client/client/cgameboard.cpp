@@ -38,10 +38,12 @@ static inline char const *_m(const std::string &message)
 static void send(QTcpSocket *to, const std::string &what)
 {
     const qint64 len = what.length() + 2;
-    while (to->write(_m(what)) != len)
+    qint64 bytesWritten;
+    do
     {
-
-    }
+        bytesWritten = to->write(_m(what));
+        to->waitForBytesWritten();
+    } while (bytesWritten != len);
 }
 
 CGameBoard::CGameBoard(QWidget *parent, const QPoint &position, const QSize &size, unsigned int FrameTime) :
@@ -51,7 +53,6 @@ CGameBoard::CGameBoard(QWidget *parent, const QPoint &position, const QSize &siz
     me->setStopTime(0.15f);
     me->Pause();
     m_playersList.append(me);
-    warmupTimer = new QTimer(this);
     m_gameBegin = true;
     m_connected = true;
     m_warmupTime = 0;
@@ -95,10 +96,10 @@ void CGameBoard::OnInit()
     CImageManager *imageManager = CImageManager::GetInstance();
     m_wall.SetImage(*imageManager->GetImage("../mur.png"));
     m_box.SetImage(*imageManager->GetImage("../box.png"));
-    m_bomb.SetImage(*imageManager->GetImage("../bomb.png"));
     m_bonus.SetImage(*imageManager->GetImage("../bonus.png"));
     m_explosion = *imageManager->GetImage("../explosion.png");
 
+    imageManager->GetImage("../bomb.png");
     imageManager->GetImage("../remote_bomb.png");
     imageManager->GetImage("../speed_up70.png");
     imageManager->GetImage("../speed_down70.png");
@@ -107,6 +108,10 @@ void CGameBoard::OnInit()
     imageManager->GetImage("../bomb_up70.png");
     imageManager->GetImage("../bomb_down70.png");
     imageManager->GetImage("../remote_mine70.png");
+    imageManager->GetImage("../bomb_pass70.png");
+    imageManager->GetImage("../bomb_kick70.png");
+    imageManager->GetImage("../full_fire70.png");
+    imageManager->GetImage("../remote_bomb.png");
     imageManager->GetImage("../explosion.png");
 }
 
@@ -177,6 +182,24 @@ void CGameBoard::OnUpdate()
             }
             break;
         case Bomb:
+            if (me->getBonus(CBonus::BombPass) != NULL)
+            {
+                me->setDirection(Right);
+            }
+            else if (me->getBonus(CBonus::BombKick) != NULL)
+            {
+                QList<CBomb *>::iterator it;
+                for (it = m_bombsList.begin(); it != m_bombsList.end(); ++it)
+                {
+                    CBomb *bomb = *it;
+                    if (bomb->getX() == me->getX() + 1 && bomb->getY() == me->getY())
+                    {
+                        bomb->setDirection(CBomb::Right);
+                        m_map.setBlock(bomb->getX(), bomb->getY(), Floor);
+                        break;
+                    }
+                }
+            }
             break;
         default:
             break;
@@ -202,6 +225,24 @@ void CGameBoard::OnUpdate()
               }
               break;
          case Bomb:
+              if (me->getBonus(CBonus::BombPass) != NULL)
+              {
+                  me->setDirection(Left);
+              }
+              else if (me->getBonus(CBonus::BombKick) != NULL)
+              {
+                  QList<CBomb *>::iterator it;
+                  for (it = m_bombsList.begin(); it != m_bombsList.end(); ++it)
+                  {
+                      CBomb *bomb = *it;
+                      if (bomb->getX() == me->getX() - 1 && bomb->getY() == me->getY())
+                      {
+                          bomb->setDirection(CBomb::Left);
+                          m_map.setBlock(bomb->getX(), bomb->getY(), Floor);
+                          break;
+                      }
+                  }
+              }
               break;
          default:
               break;
@@ -225,8 +266,26 @@ void CGameBoard::OnUpdate()
                    send(m_socket , "MOVE " + me->getNick() + " DOWN " + pos);
                    qDebug() << "DOWN";
               }
+             else if (me->getBonus(CBonus::BombKick) != NULL)
+             {
+                 QList<CBomb *>::iterator it;
+                 for (it = m_bombsList.begin(); it != m_bombsList.end(); ++it)
+                 {
+                     CBomb *bomb = *it;
+                     if (bomb->getX() == me->getX() && bomb->getY() == me->getY() + 1)
+                     {
+                         bomb->setDirection(CBomb::Down);
+                         m_map.setBlock(bomb->getX(), bomb->getY(), Floor);
+                         break;
+                     }
+                 }
+             }
              break;
          case Bomb:
+             if (me->getBonus(CBonus::BombPass) != NULL)
+             {
+                 me->setDirection(Down);
+             }
              break;
          default:
              break;
@@ -253,6 +312,24 @@ void CGameBoard::OnUpdate()
                }
                break;
          case Bomb:
+               if (me->getBonus(CBonus::BombPass) != NULL)
+               {
+                   me->setDirection(Up);
+               }
+               else if (me->getBonus(CBonus::BombKick) != NULL)
+               {
+                   QList<CBomb *>::iterator it;
+                   for (it = m_bombsList.begin(); it != m_bombsList.end(); ++it)
+                   {
+                       CBomb *bomb = *it;
+                       if (bomb->getX() == me->getX() && bomb->getY() == me->getY() - 1)
+                       {
+                           bomb->setDirection(CBomb::Up);
+                           m_map.setBlock(bomb->getX(), bomb->getY(), Floor);
+                           break;
+                       }
+                   }
+               }
                break;
          default:
              break;
@@ -281,23 +358,24 @@ void CGameBoard::OnUpdate()
 */
 void CGameBoard::drawMap()
 {
-    for(unsigned i = 0; i < 15; i++)
+    /* Drawing the map */
+    for(unsigned i = 0; i < MAP_WIDTH; i++)
     {
-        for(unsigned j = 0; j < 15; j++)
+        for(unsigned j = 0; j < MAP_HEIGHT; j++)
         {
-            switch(m_map.getBlock(i,j))
+            switch(m_map.getBlock(i, j))
             {
             case Wall:
-                m_wall.SetPosition(34*i, 34*j);
+                m_wall.SetPosition(BLOCK_SIZE * i, BLOCK_SIZE * j);
                 Draw(m_wall);
                 break;
             case Box:
             case BonusBox:
-                m_box.SetPosition(34*i, 34*j);
+                m_box.SetPosition(BLOCK_SIZE * i, BLOCK_SIZE * j);
                 Draw(m_box);
                 break;
             case Bonus:
-                m_bonus.SetPosition((34 * i) + 5, (34 * j) + 5);
+                m_bonus.SetPosition((BLOCK_SIZE * i) + 5, (BLOCK_SIZE * j) + 5);
                 Draw(m_bonus);
                 break;
             case Floor:
@@ -311,22 +389,57 @@ void CGameBoard::drawMap()
             }
         }
     }
-    QList<CBomb *>::const_iterator it;
-    CImageManager *imageManager = CImageManager::GetInstance();
-    for (it = m_bombsList.begin(); it != m_bombsList.end(); ++it)
+
+    /* Drawing the bombs */
+    QList<CBomb *>::iterator it = m_bombsList.begin();
+    while(it != m_bombsList.end())
     {
-        unsigned x = (*it)->getX();
-        unsigned y = (*it)->getY();
-        if ((*it)->getType() == CBomb::Normal)
+        CBomb *bomb = *it;
+        unsigned x = bomb->getX();
+        unsigned y = bomb->getY();
+        /* Update the time */
+        bomb->updateTime(GetFrameTime());
+        /* It the bomb must explode */
+        if (bomb->explode())
         {
-            m_bomb.SetImage(*imageManager->GetImage("../bomb.png"));
+            CPlayer *me = m_playersList[0];
+            CPlayer *player = getPlayerFromNick(bomb->getBomber());
+            QSound::play("../explosion.wav");
+            m_explosionsList.push_back(new CExplosion(x, y, player->bombRange, m_map,
+                                                      bomb->getBomber(), m_explosion));
+            if (bomb->getBomber() == me->getNick()) /* If I am the bomber */
+            {
+                me->pausedBombs--;
+            }
+            it = m_bombsList.erase(it);
+            delete bomb;
         }
         else
         {
-            m_bomb.SetImage(*imageManager->GetImage("../remote_bomb.png"));
+            /* Let's check if the camp has been kicked (bomb kick) */
+            if (bomb->getDirection() != CBomb::Fixed)
+            {
+                switch (bomb->getCollision(bomb->getDirection(), m_map))
+                {
+                case Floor:
+                case Bonus:
+                    /* The bomb still can move */
+                    bomb->move(bomb->getDirection(), GetFrameTime());
+                    break;
+                case Wall:
+                case Box:
+                case BonusBox:
+                    /* We reached a block, we stop the move */
+                    bomb->SetPosition((bomb->getX() * BLOCK_SIZE) + 6, (bomb->getY() * BLOCK_SIZE) + 6);
+                    bomb->setDirection(CBomb::Fixed);
+                    break;
+                default:
+                    break;
+                }
+            }
+            Draw(*bomb);
+            ++it;
         }
-        m_bomb.SetPosition((34 * x) + 6, (34 * y) + 6);
-        Draw(m_bomb);
     }
 }
 
@@ -356,29 +469,69 @@ void CGameBoard::drawPlayers()
                 {
                     if (m_bonusCanvas == NULL)
                     {
-                        m_bonusCanvas = new CBonusCanvas(0.1f, 4.0f, sf::Rect<int>(535, 320,605, 390));
+                        m_bonusCanvas = new CBonusCanvas(0.05f, 1.0f, sf::Rect<int>(535, 320,605, 390));
                         m_map.setBlock(x, y, Floor);
                         QSound::play("../bonus.wav");
                     }
-                    else if (m_bonusCanvas->isFinished())
+                    else
                     {
                         m_bonusCanvas->Reset();
                         m_bonusCanvas->Play();
                         m_map.setBlock(x, y, Floor);
                         QSound::play("../bonus.wav");
                     }
-                    else
-                    {
-                        if (player->getCollision(player->getDirection(), m_map) != Wall &&
-                            player->getCollision(player->getDirection(), m_map) != Box &&
-                            player->getCollision(player->getDirection(), m_map) != BonusBox)
-                        {
-                            player->move(player->getDirection(), GetFrameTime());
-                        }
-                    }
+                }
+                else
+                {
+                    QSound::play("../bonus.wav");
+                    m_map.setBlock(x, y, Floor);
                 }
                 break;
             case Bomb:
+                if (player->getBonus(CBonus::BombPass) != NULL)
+                {
+                    player->move(player->getDirection(), GetFrameTime());
+                }
+                else if (player->getBonus(CBonus::BombKick) != NULL)
+                {
+                    unsigned _x = 0, _y = 0;
+                    CBomb::Direction direction;
+                    switch (player->getDirection())
+                    {
+                    case Right:
+                       _x = player->getX() + 1;
+                       _y = player->getY();
+                       direction = CBomb::Right;
+                       break;
+                    case Left:
+                       _x = player->getX() - 1;
+                       _y = player->getY();
+                       direction = CBomb::Left;
+                       break;
+                    case Up:
+                       _x = player->getX();
+                       _y = player->getY() - 1;
+                       direction = CBomb::Up;
+                       break;
+                    case Down:
+                       _x = player->getX();
+                       _y = player->getY() + 1;
+                       direction = CBomb::Down;
+                    default:
+                       break;
+                    }
+                    QList<CBomb *>::iterator it;
+                    for (it = m_bombsList.begin(); it != m_bombsList.end(); ++it)
+                    {
+                        CBomb *bomb = *it;
+                        if (bomb->getX() == _x && bomb->getY() == _y)
+                        {
+                            bomb->setDirection(direction);
+                            m_map.setBlock(bomb->getX(), bomb->getY(), Floor);
+                            break;
+                        }
+                    }
+                }
                 break;
             default:
                 break;
@@ -500,7 +653,7 @@ void CGameBoard::drawBonusCanvas()
 
         /* Bonus Name */
         sf::String bonusName;
-        bonusName.SetText(m_bonusCanvas->getBonus().toString());
+        bonusName.SetText(m_bonusCanvas->getBonus()->toString());
         bonusName.SetSize(11.0f);
         bonusName.SetColor(sf::Color(255, 255, 255));
         bonusName.SetPosition(m_bonusCanvas->getCanvasPosition().Left + 3,
@@ -520,10 +673,8 @@ void CGameBoard::drawBonusCanvas()
             CPlayer *me = m_playersList[0];
             if (!m_bonusCanvas->isPaused())
             {
-                CBonus bonus = m_bonusCanvas->getBonus();
                 /* Let's check which bonus we've got */
-
-                switch (bonus.getType())
+                switch (m_bonusCanvas->getBonus()->getType())
                 {
                 case CBonus::BombDown:
                     me->addBonus(new CBonus(CBonus::BombDown));
@@ -548,9 +699,14 @@ void CGameBoard::drawBonusCanvas()
                     break;
                 case CBonus::FireUp:
                     me->addBonus(new CBonus(CBonus::FireUp));
+                    send(m_socket, "BONUS " + me->getNick() + " FIREUP");
                     break;
                 case CBonus::FireDown:
                     me->addBonus(new CBonus(CBonus::FireDown));
+                    send(m_socket, "BONUS " + me->getNick() + " FIREDOWN");
+                    break;
+                case CBonus::FullFire:
+                    me->addBonus(new CBonus(CBonus::FullFire));
                     break;
                 case CBonus::RemoteMine:
                     if (me->getBonus(CBonus::RemoteMine) == NULL)
@@ -558,6 +714,15 @@ void CGameBoard::drawBonusCanvas()
                         me->addBonus(new CBonus(CBonus::RemoteMine));
                         send(m_socket, "BONUS " + me->getNick() + " REMOTEMINE");
                     }
+                case CBonus::BombPass:
+                    me->removeBonus(CBonus::BombKick);
+                    me->addBonus(new CBonus(CBonus::BombPass));
+                    send(m_socket, "BONUS " + me->getNick() + " BOMBPASS");
+                    break;
+                case CBonus::BombKick:
+                    me->removeBonus(CBonus::BombPass);
+                    me->addBonus(new CBonus(CBonus::BombKick));
+                    send(m_socket, "BONUS " + me->getNick() + " BOMBKICK");
                     break;
                 default:
                     break;
@@ -707,13 +872,9 @@ void CGameBoard::plantedBomb(const std::string &bomber, unsigned x, unsigned y,
     QSound::play("../plant.wav");
 }
 
-void CGameBoard::bombExplode(const std::string &bomber, unsigned x, unsigned y)
+void CGameBoard::remoteExplode(const std::string &bomber, unsigned x, unsigned y)
 {
     CPlayer *player = getPlayerFromNick(bomber);
-    if (bomber == m_playersList[0]->getNick()) /* If I am the bomber */
-    {
-        m_playersList[0]->pausedBombs--;
-    }
     m_map.setBlock(x, y, Floor);
     /* Remove the bomb from the list */
     QList<CBomb *>::iterator it;
@@ -722,16 +883,15 @@ void CGameBoard::bombExplode(const std::string &bomber, unsigned x, unsigned y)
         CBomb *bomb = *it;
         if (bomb->getX() == x && bomb->getY() == y)
         {
-            m_bombsList.removeOne(*it);
+            m_bombsList.removeOne(bomb);
             delete bomb;
             break;
         }
     }
     QSound::play("../explosion.wav");
     m_explosionsList.push_back(new CExplosion(x, y, player->bombRange, m_map,
-                                              bomber, m_explosion));
+                                                  bomber, m_explosion));
 }
-
 
 void CGameBoard::setPlayerColor(std::string color)
 {
@@ -754,6 +914,7 @@ void CGameBoard::setNick(const std::string &nick){
 void CGameBoard::setMap(std::string map)
 {
     /* Map is received, we can begin the game */
+    warmupTimer = new QTimer(this);
     m_gameBegin = false;
     warmupTimer->setInterval(1000);
     warmupTimer->start();
@@ -778,7 +939,7 @@ void CGameBoard::checkWarmupTime()
         m_gameBegin = true;
         m_status = None;
         m_warmupTime = 0;
-        warmupTimer->stop();
+        delete warmupTimer;
     }
 }
 
@@ -864,6 +1025,26 @@ void CGameBoard::playerGotBonus(const std::string &nick, const std::string &bonu
     else if (bonus == "BOMBUP")
     {
         player->addBonus(new CBonus(CBonus::BombUp));
+    }
+    else if (bonus == "FIREUP")
+    {
+        player->addBonus(new CBonus(CBonus::FireUp));
+    }
+    else if (bonus == "FIREDOWN")
+    {
+        player->addBonus(new CBonus(CBonus::FireDown));
+    }
+    else if (bonus == "FULLFIRE")
+    {
+        player->addBonus(new CBonus(CBonus::FullFire));
+    }
+    else if (bonus == "BOMBPASS")
+    {
+        player->addBonus(new CBonus(CBonus::BombPass));
+    }
+    else if (bonus == "BOMBKICK")
+    {
+        player->addBonus(new CBonus(CBonus::BombKick));
     }
 }
 

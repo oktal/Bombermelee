@@ -2,18 +2,28 @@
 #include "cimagemanager.h"
 #include <algorithm>
 #include <ctime>
+#include <QPair>
+#include <QtDebug>
+
+static inline bool is_in(int n, QPair<int, int> pair)
+{
+    return n >= pair.first && n <= pair.second;
+}
 
 CBonusCanvas::CBonusCanvas(float time, float timeToLeave, sf::Rect<int> position)
 {
-    m_bonusList.push_back(new CBonus(CBonus::BombUp));
-    m_bonusList.push_back(new CBonus(CBonus::FireUp));
-    m_bonusList.push_back(new CBonus(CBonus::SpeedUp));
-    m_bonusList.push_back(new CBonus(CBonus::SpeedDown));
-    m_bonusList.push_back(new CBonus(CBonus::BombDown));
-    m_bonusList.push_back(new CBonus(CBonus::FireDown));
-    m_bonusList.push_back(new CBonus(CBonus::RemoteMine));
+    m_bonusList.insert(new CBonus(CBonus::BombUp), qMakePair(0, 5));
+    m_bonusList.insert(new CBonus(CBonus::FireUp), qMakePair(6, 9));
+    m_bonusList.insert(new CBonus(CBonus::SpeedUp), qMakePair(10, 13));
 
-    //std::random_shuffle(m_bonusList.begin(), m_bonusList.end());
+    m_bonusList.insert(new CBonus(CBonus::SpeedDown), qMakePair(14, 15));
+    m_bonusList.insert(new CBonus(CBonus::BombDown), qMakePair(16, 17));
+    m_bonusList.insert(new CBonus(CBonus::FireDown), qMakePair(18, 19));
+
+    m_bonusList.insert(new CBonus(CBonus::BombPass), qMakePair(20, 21));
+    m_bonusList.insert(new CBonus(CBonus::FullFire), qMakePair(22, 22));
+    m_bonusList.insert(new CBonus(CBonus::RemoteMine), qMakePair(23, 23));
+    m_bonusList.insert(new CBonus(CBonus::BombKick), qMakePair(24, 25));
 
     m_time = time;
     m_totalTime = 0.0f;
@@ -29,7 +39,7 @@ CBonusCanvas::CBonusCanvas(float time, float timeToLeave, sf::Rect<int> position
 void CBonusCanvas::setBonusImage()
 {
     CImageManager *imageManager = CImageManager::GetInstance();
-    switch (m_bonusList[m_currentBonus]->getType())
+    switch (m_bonusList.keys()[m_currentBonus]->getType())
     {
     case CBonus::BombDown:
         SetImage(*imageManager->GetImage("../bomb_down70.png"));
@@ -50,16 +60,22 @@ void CBonusCanvas::setBonusImage()
         SetImage(*imageManager->GetImage("../fire_up70.png"));
         break;
     case CBonus::FullFire:
+        SetImage(*imageManager->GetImage("../full_fire70.png"));
         break;
     case CBonus::RemoteMine:
         SetImage(*imageManager->GetImage("../remote_mine70.png"));
+    case CBonus::BombPass:
+        SetImage(*imageManager->GetImage("../bomb_pass70.png"));
+        break;
+    case CBonus::BombKick:
+        SetImage(*imageManager->GetImage("../bomb_kick70.png"));
         break;
     }
 }
 
-CBonus CBonusCanvas::getBonus() const
+CBonus *CBonusCanvas::getBonus() const
 {
-    return *m_bonusList[m_currentBonus];
+    return m_bonusList.keys()[m_currentBonus];
 }
 
 sf::Rect<int> CBonusCanvas::getCanvasPosition() const
@@ -93,12 +109,21 @@ void CBonusCanvas::playNextBonus(const float &elapsedTime)
     else if (m_elapsedTime >= m_time)
     {
         m_elapsedTime = 0.0;
-        unsigned bonus;
+        unsigned random;
+        unsigned const maxRandom = m_bonusList.values()[m_bonusList.size() - 1].second;
         do
         {
-            bonus = sf::Randomizer::Random(0, m_bonusList.size() - 1);
-        } while (bonus == m_currentBonus);
-        m_currentBonus = bonus;
+            random = sf::Randomizer::Random(0, maxRandom);
+        } while (random == m_lastRandom);
+        m_lastRandom = random;
+        for (int i = 0; i < m_bonusList.size(); ++i)
+        {
+            if (is_in(random, m_bonusList.values()[i]))
+            {
+                m_currentBonus = i;
+                break;
+            }
+        }
         setBonusImage();
     }
 }
@@ -115,7 +140,6 @@ void CBonusCanvas::Pause()
 
 void CBonusCanvas::Reset()
 {
-    std::random_shuffle(m_bonusList.begin(), m_bonusList.end());
     m_totalTime = 0.0f;
     m_elapsedTime = 0.0f;
     m_currentBonus = 0;
