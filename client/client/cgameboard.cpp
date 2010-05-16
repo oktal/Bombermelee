@@ -411,6 +411,7 @@ void CGameBoard::drawMap()
             {
                 me->pausedBombs--;
             }
+            m_map.setBlock(bomb->getX(), bomb->getY(), Floor);
             it = m_bombsList.erase(it);
             delete bomb;
         }

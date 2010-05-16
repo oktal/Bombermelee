@@ -64,6 +64,7 @@ void CBonusCanvas::setBonusImage()
         break;
     case CBonus::RemoteMine:
         SetImage(*imageManager->GetImage("../remote_mine70.png"));
+        break;
     case CBonus::BombPass:
         SetImage(*imageManager->GetImage("../bomb_pass70.png"));
         break;
