@@ -424,15 +424,32 @@ void CGameBoard::drawMap()
                 {
                 case Floor:
                 case Bonus:
+                    {
                     /* The bomb still can move */
+                    unsigned last_x = bomb->getX(), last_y = bomb->getY();
                     bomb->move(bomb->getDirection(), GetFrameTime());
+                    unsigned new_x = bomb->getX(), new_y = bomb->getY();
+                    if (last_x != new_x && last_y != new_y)
+                    {
+                        if (m_map.getBlock(new_x, new_y) != Bonus)
+                        {
+                            m_map.setBlock(new_x, new_y, Bomb);
+                            if (m_map.getBlock(last_x, last_y) != Bonus)
+                            {
+                                m_map.setBlock(last_x, last_y, Floor);
+                            }
+                        }
+                    }
+                }
                     break;
                 case Wall:
                 case Box:
                 case BonusBox:
+                case Bomb:
                     /* We reached a block, we stop the move */
                     bomb->SetPosition((bomb->getX() * BLOCK_SIZE) + 6, (bomb->getY() * BLOCK_SIZE) + 6);
                     bomb->setDirection(CBomb::Fixed);
+                    m_map.setBlock(bomb->getX(), bomb->getY(), Bomb);
                     break;
                 default:
                     break;
