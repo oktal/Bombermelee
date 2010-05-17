@@ -410,13 +410,10 @@ void CPlayer::addBonus(CBonus *bonus)
     {
     case CBonus::SpeedUp:
         m_speed *= 2;
-        m_oldStopTime = m_stopTime;
-        m_stopTime = 0.0f;
         removeBonus(CBonus::SpeedDown);
         break;
     case CBonus::SpeedDown:
         m_speed /= 2;
-        m_stopTime = m_oldStopTime;
         removeBonus(CBonus::SpeedUp);
         break;
     case CBonus::BombUp:
@@ -509,7 +506,6 @@ void CPlayer::updateBonusTime(const float &elapsedTime)
                 switch (bonus->getType())
                 {
                 case CBonus::SpeedUp:
-                    m_stopTime = m_oldStopTime;
                     m_speed = Speed;
                     break;
                 case CBonus::SpeedDown:

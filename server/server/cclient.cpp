@@ -3,7 +3,12 @@
 CClient::CClient(QTcpSocket *socket, const QString &nick, const QString &color) :
         m_socket(socket), m_nick(nick), m_color(color)
 {
+    networkManager = new CNetworkManager(socket);
+}
 
+CClient::~CClient()
+{
+    delete networkManager;
 }
 
 QString CClient::getColor() const
@@ -31,13 +36,13 @@ void CClient::setNick(const QString &nick)
     m_nick = nick;
 }
 
-void CClient::send(const std::string &what)
+void CClient::send(const QByteArray &data)
 {
-    const qint64 len = what.length() + 2;
+    const qint64 len = data.length();
     qint64 bytesWritten;
     do
     {
-        bytesWritten = m_socket->write(_m(what));
+        bytesWritten = m_socket->write(data);
         m_socket->waitForBytesWritten();
     } while (bytesWritten != len);
 }

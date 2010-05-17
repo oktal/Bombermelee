@@ -1,5 +1,9 @@
 #include "cclient.h"
 #include "cconnect.h"
+#include "cnetworkmanager.h"
+#include "cplayer.h"
+#include "cbomb.h"
+#include "cbonus.h"
 #include <QtGui>
 #include <QTcpSocket>
 #include <QEvent>
@@ -71,18 +75,19 @@ CClient::CClient(QWidget *parent, const QString &address, const QString &nick) :
     connectToServer();
 }
 
-void CClient::connectToServer() const
+void CClient::connectToServer()
 {
     m_socket->connectToHost(m_address, DefaultPort);
     QObject::connect(m_socket, SIGNAL(connected()), this, SLOT(onConnected()));
     QObject::connect(m_socket, SIGNAL(error(QAbstractSocket::SocketError)), this, SLOT(onError()));
     QObject::connect(m_socket, SIGNAL(readyRead()), this, SLOT(processReadyRead()));
+
+    m_networkManager = new CNetworkManager(m_socket);
 }
 
 void CClient::onConnected()
 {
-    m_socket->write(_m("EHLO"));
-    m_socket->flush();
+    m_networkManager->sendEhloPacket();
 }
 
 void CClient::onError()
@@ -95,102 +100,45 @@ void CClient::onError()
 
 void CClient::processReadyRead()
 {
-    if (m_socket->bytesAvailable() < (int)sizeof(quint16))
+    if (m_socket->bytesAvailable() < (int)sizeof(quint32))
     {
         return;
     }
-    while (!m_buffer.isEmpty())
-    {
-        m_buffer.clear();
-    }
+    m_buffer.clear();
     do
     {
         QByteArray c = m_socket->read(1);
-        /* A valid message must be ended by "\r\n". If not, we don't treat it */
-        if (c == "\r")
-        {
-            if ((c = m_socket->read(1)) != "\n")
-            {
-                return;
-            }
-        }
-        else
-        {
-            m_buffer.append(c);
-        }
+        m_buffer.append(c);
     } while (m_socket->bytesAvailable());
-    readProtocolHeader();
-    processData();
-    messageType = Undefined;
-}
 
-void CClient::readProtocolHeader()
-{
-    QStringList l = QString(m_buffer.data()).split(SeparatorToken);
-    if (l[0] == "EHLO")
-    {
-        messageType = Ehlo;
-    }
-    else if (l[0] == "OK")
-    {
-        messageType = Ok;
-    }
-    else if (l[0] == "FULL")
-    {
-        messageType = Full;
-    }
-    else if (l[0] == "BADNICK")
-    {
-        messageType = Badnick;
-    }
-    else if (l[0] == "JOIN")
-    {
-        messageType = Join;
-    }
-    else if (l[0] == "PART")
-    {
-        messageType = Part;
-    }
-    else if (l[0] == "USERS")
-    {
-        messageType = Users;
-    }
-    else if (l[0] == "SAY")
-    {
-        messageType = Say;
-    }
-    else if (l[0] == "MOVE")
-    {
-        messageType = Move;
-    }
-    else if (l[0] == "MAP")
-    {
-        messageType = Map;
-    }
-    else if (l[0] == "BOMB")
-    {
-        messageType = Bomb;
-    }
-    else if (l[0] == "BOOM")
-    {
-        messageType = Boom;
-    }
-    else if (l[0] == "BONUS")
-    {
-        messageType = Bonus;
-    }
+    processData();
 }
 
 void CClient::processData()
 {
-    QStringList l = QString(m_buffer.data()).split(SeparatorToken);
-    qDebug() << m_buffer.data();
-    switch (messageType)
+    quint32 packet;
+    CNetworkManager networkManager(m_socket);
+    QDataStream in(&m_buffer, QIODevice::ReadOnly);
+    in.setVersion(QDataStream::Qt_4_6);
+
+    quint32 blockSize;
+    in >> blockSize;
+
+    if (!blockSize ||
+        static_cast<quint32>(m_buffer.size() - sizeof(quint32)) != blockSize)
     {
-    case Ehlo:
-         m_socket->write(_m("NICK " + m_nick.toStdString()));
+        qDebug() << "Invalid packet received";
+        return;
+    }
+
+    in >> packet;
+
+    switch (static_cast<CNetworkManager::PacketType>(packet))
+    {
+    case CNetworkManager::Ehlo:
+         m_networkManager->sendNickPacket(m_nick);
          break;
-    case Badnick:
+    case CNetworkManager::Badnick:
          QMessageBox::warning(this, "Warning", tr("The nick you chosed is already used, please chose an other one"));
          {
              CConnect *c = new CConnect();
@@ -198,7 +146,7 @@ void CClient::processData()
              close();
          }
          break;
-    case Full:
+    case CNetworkManager::Full:
          QMessageBox::warning(this, "Warning", tr("Can't connect to server because server is full"));
          {
              CConnect *c = new CConnect();
@@ -206,98 +154,154 @@ void CClient::processData()
              close();
          }
          break;
-    case Ok:
-        appendToChatBox(tr("<font color='blue'><em>You are connected</em></font>"));
-        appendToChatBox(tr("<font color='blue'><em>You have been assigned color "
-                           "<strong>%2</strong></em></font>").arg(l[1]));
-        m_gameBoard->setPlayerColor(l[1].toStdString());
-        m_gameBoard->setConnected(true);
-        setWindowTitle(m_nick + " connected on " + m_address);
-        m_socket->write(_m("USERS"));
-        break;
-    case Join:
-        appendToChatBox(tr("<font color='blue'><em>%1 has joined the game an "
-                           "has been assigned color "
-                           "<strong>%2</strong></em></font>").arg(l[1]).arg(l[2]));
-        appendToUsersList(l[1], l[2]);
-        m_gameBoard->newPlayer(l[1].toStdString(), l[2].toStdString());
-        break;
-    case Part:
-        appendToChatBox(tr("<font color='blue'><em>%1 has left the game</em></font>").arg(l[1]));
-        for (int i = 0; i < m_lst_users->count(); ++i)
-        {
-            if (m_lst_users->item(i)->text() == l[1])
-            {
-                QListWidgetItem *it = m_lst_users->takeItem(i);
-                delete it;
-                break;
-            }
-        }
-        m_gameBoard->playerLeft(l[1].toStdString());
-        break;
-    case Users:
-        for (int i = 1; i < l.length(); ++i)
-        {
-            QStringList c = l[i].split(":");
-            appendToUsersList(c[0], c[1]);
-            if (c[0] != m_nick)
-            {
-                m_gameBoard->newPlayer(c[0].toStdString(), c[1].toStdString());
-            }
+    case CNetworkManager::Ok:
+         {
+            QString color;
+            in >> color;
+            appendToChatBox(tr("<font color='blue'><em>You are connected</em></font>"));
+            appendToChatBox(tr("<font color='blue'><em>You have been assigned color "
+                           "<strong>%2</strong></em></font>").arg(color));
+            m_gameBoard->setPlayerColor(color.toStdString());
+            m_gameBoard->setConnected(true);
+            setWindowTitle(m_nick + " connected on " + m_address);
+            m_networkManager->sendUsersPacket();
         }
         break;
-    case Say:
+    case CNetworkManager::Join:
         {
-            QString nick = l[1];
-            l.removeFirst();
-            l.removeFirst();
-            QString message = l.join(" ");
+            QString nick, color;
+            in >> nick;
+            in >> color;
+            appendToChatBox(tr("<font color='blue'><em>%1 has joined the game an "
+                               "has been assigned color "
+                               "<strong>%2</strong></em></font>").arg(nick).arg(color));
+            appendToUsersList(nick, color);
+            m_gameBoard->newPlayer(nick.toStdString(), color.toStdString());
+        }
+        break;
+    case CNetworkManager::Part:
+        {
+            QString nick;
+            in >> nick;
+            appendToChatBox(tr("<font color='blue'><em>%1 has left the game</em></font>").arg(nick));
+            for (int i = 0; i < m_lst_users->count(); ++i)
+            {
+                if (m_lst_users->item(i)->text() == nick)
+                {
+                    QListWidgetItem *it = m_lst_users->takeItem(i);
+                    delete it;
+                    break;
+                }
+            }
+            m_gameBoard->playerLeft(nick.toStdString());
+        }
+        break;
+    case CNetworkManager::Users:
+        {
+            qDebug() << "Received Users Packet";
+            QList<QString> users;
+            in >> users;
+            for (int i = 0; i < users.length(); ++i)
+            {
+                QStringList c = users[i].split(":");
+                appendToUsersList(c[0], c[1]);
+                if (c[0] != m_nick)
+                {
+                    m_gameBoard->newPlayer(c[0].toStdString(), c[1].toStdString());
+                }
+            }
+        }
+        break;
+    case CNetworkManager::Say:
+        {
+            qDebug() << "Received Say Packet";
+            QString nick, message;
+            in >> nick;
+            in >> message;
             QString time = QTime::currentTime().toString();
-            appendToChatBox(tr("<font color='blue'>[%1] %2 : %3</font>").arg(time).arg(nick).arg(message));
+            if (nick != m_nick)
+            {
+                appendToChatBox(tr("<font color='blue'>[%1] %2 : %3</font>").arg(time).arg(nick).arg(message));
+            }
         }
         break;
-    case Move:
+    case CNetworkManager::Move:
         {
-            const float x = strtod(l[3].toStdString().c_str(), NULL);
-            const float y = strtod(l[4].toStdString().c_str(), NULL);
-            m_gameBoard->playerMove(l[1].toStdString(), l[2].toStdString(), x, y);
+            QString nick;
+            float x;
+            float y;
+            quint8 direction;
+            in >> nick;
+            in >> direction;
+            in >> x;
+            in >> y;
+            if (nick != m_nick)
+            {
+                m_gameBoard->playerMove(nick.toStdString(), static_cast<Direction>(direction), x, y);
+            }
         }
         break;
-    case Map:
-        m_gameBoard->setMap(l[1].toStdString());
-        break;
-    case Bomb:
+    case CNetworkManager::Map:
         {
-            unsigned x = strtol(l[2].toStdString().c_str(), NULL, 10);
-            unsigned y = strtol(l[3].toStdString().c_str(), NULL, 10);
-            m_gameBoard->plantedBomb(l[1].toStdString(), x, y, l[4].toStdString());
+            QString map;
+            in >> map;
+            m_gameBoard->setMap(map.toStdString());
         }
         break;
-    case Boom:
+    case CNetworkManager::Bomb:
         {
-            unsigned x = strtol(l[2].toStdString().c_str(), NULL, 10);
-            unsigned y = strtol(l[3].toStdString().c_str(), NULL, 10);
-            m_gameBoard->remoteExplode(l[1].toStdString(), x, y);
+            QString nick;
+            unsigned x, y;
+            quint8 type;
+            in >> nick;
+            in >> x;
+            in >> y;
+            in >> type;
+            if (nick != m_nick)
+            {
+                m_gameBoard->plantedBomb(nick.toStdString(), x, y, static_cast<CBomb::BombType>(type));
+            }
         }
         break;
-    case Bonus:
-        m_gameBoard->playerGotBonus(l[1].toStdString(), l[2].toStdString());
+    case CNetworkManager::Boom:
         {
+            QString nick;
+            unsigned x, y;
+            in >> nick;
+            in >> x;
+            in >> y;
+            if (nick != m_nick)
+            {
+                m_gameBoard->remoteExplode(nick.toStdString(), x, y);
+            }
+        }
+        break;
+    case CNetworkManager::Bonus:
+        {
+            QString nick;
+            quint8 bonustype;
+            in >> nick;
+            in >> bonustype;
             QString type = "";
-            QStringList bonusList, malusList;
-            bonusList << "SPEEDUP" << "BOMBUP" << "FIREUP" << "FULLFIRE" << "REMOTEMINE"
-                      << "BOMBKICK" << "BOMBPASS";
-            malusList << "SPEEDOWN" << "BOMBDOWN" << "FIREDOWN";
-            if(bonusList.contains(l[2]))
+            if (nick != m_nick)
             {
-                type = "Bonus";
+                m_gameBoard->playerGotBonus(nick.toStdString(), static_cast<CBonus::BonusType>(bonustype));
+                CBonus bonus(static_cast<CBonus::BonusType>(bonustype));
+                QStringList bonusList, malusList;
+                bonusList << "Speed Up" << "Bomb uP" << "Fire Up" << "Full Fire" << "Remote Mine"
+                          << "Bomb Kick" << "Bomb Pass";
+                malusList << "Speed Down" << "Bomb Down" << "Fire Down";
+                if(bonusList.contains(QString(bonus.toString().c_str())))
+                {
+                    type = "Bonus";
+                }
+                else if (malusList.contains(QString(bonus.toString().c_str())))
+                {
+                    type = "Malus";
+                }
+                appendToChatBox(tr("<font color='blue'><em>%1 has got <strong>%2</strong> %3</em></font>")
+                                .arg(nick).arg(QString(bonus.toString().c_str())).arg(type));
             }
-            else if (malusList.contains(l[2]))
-            {
-                type = "Malus";
-            }
-            appendToChatBox(tr("<font color='blue'><em>%1 has got <strong>%2</strong> %3</em></font>")
-                            .arg(l[1]).arg(l[2]).arg(type));
         }
         break;
     default:
@@ -324,9 +328,7 @@ void CClient::sendMessage()
     {
         return;
     }
-    QString req = "SAY " + m_nick + " ";
-    req += m_message->text();
-    m_socket->write(_m(req.toStdString()));
+    m_networkManager->sendSayPacket(m_nick, m_message->text());
     QString time = QTime::currentTime().toString();
     appendToChatBox(tr("<font color='blue'>[%1] %2 : %3</font>").arg(time).arg(m_nick).arg(m_message->text()));
     m_message->clear();

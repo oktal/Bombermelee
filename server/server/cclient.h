@@ -3,6 +3,7 @@
 
 #include <QTcpSocket>
 #include <QString>
+#include "cnetworkmanager.h"
 
 /**
   * function _m transforms a message into a valid message request (ending by \r\n)
@@ -17,12 +18,14 @@ class CClient
 {
 public:
     CClient(QTcpSocket *socket, const QString &nick, const QString &color = "");
+    ~CClient();
     QString getNick() const;
     QString getColor() const;
     QTcpSocket *getSocket() const;
     void setNick(const QString &nick);
     void setColor(const QString &color);
-    void send(const std::string &what);
+    void send(const QByteArray &data);
+    CNetworkManager *networkManager;
 
 private:
     QTcpSocket *m_socket;

@@ -109,7 +109,6 @@ private:
     Direction m_direction;
     float m_elapsedTime;
     float m_stopTime;
-    float m_oldStopTime;
     unsigned m_speed;
     bool m_dead;
     std::list<CBonus *> m_bonusList;
