@@ -35,17 +35,6 @@ static inline char const *_m(const std::string &message)
     return std::string(message + "\r\n").c_str();
 }
 
-static void send(QTcpSocket *to, const std::string &what)
-{
-    const qint64 len = what.length() + 2;
-    qint64 bytesWritten;
-    do
-    {
-        bytesWritten = to->write(_m(what));
-        to->waitForBytesWritten();
-    } while (bytesWritten != len);
-}
-
 CGameBoard::CGameBoard(QWidget *parent, const QPoint &position, const QSize &size, unsigned int FrameTime) :
         QSFMLCanvas(parent, position, size, FrameTime)
 {
@@ -58,6 +47,7 @@ CGameBoard::CGameBoard(QWidget *parent, const QPoint &position, const QSize &siz
     m_warmupTime = 0;
     m_status = Waiting_Players;
     m_bonusCanvas = NULL;
+    m_networkManager = new CNetworkManager();
 
     /* TEST */
     m_map.setBlock(2, 0, Bonus);
@@ -139,6 +129,8 @@ void CGameBoard::OnUpdate()
 
     /* Handling Event */
     CPlayer *me = m_playersList[0]; /* I am the first player of the list */
+    float x = me->GetPosition().x;
+    float y = me->GetPosition().y;
     std::string pos = QString("%1 %2").arg(me->GetPosition().x).arg(me->GetPosition().y)
                                       .toStdString();
     if (me->isDead())
@@ -176,9 +168,8 @@ void CGameBoard::OnUpdate()
         case Bonus:
             if (me->getDirection() != Right)
             {
-                send(m_socket , "MOVE " + me->getNick() + " RIGHT " + pos);
+                m_networkManager->sendMovePacket(me->getNick(), Right, x, y);
                 me->setDirection(Right);
-                qDebug() << "RIGHT";
             }
             break;
         case Bomb:
@@ -220,8 +211,7 @@ void CGameBoard::OnUpdate()
               if (me->getDirection() != Left)
               {
                   me->setDirection(Left);
-                  send(m_socket , "MOVE " + me->getNick() + " LEFT " + pos);
-                  qDebug() << "LEFT";
+                  m_networkManager->sendMovePacket(me->getNick(), Left, x, y);
               }
               break;
          case Bomb:
@@ -263,8 +253,7 @@ void CGameBoard::OnUpdate()
              if (me->getDirection() != Down)
               {
                    me->setDirection(Down);
-                   send(m_socket , "MOVE " + me->getNick() + " DOWN " + pos);
-                   qDebug() << "DOWN";
+                   m_networkManager->sendMovePacket(me->getNick(), Down, x, y);
               }
              else if (me->getBonus(CBonus::BombKick) != NULL)
              {
@@ -306,9 +295,8 @@ void CGameBoard::OnUpdate()
          case Bonus:
                if (me->getDirection() != Up)
                {
-                    send(m_socket, "MOVE " + me->getNick() + " UP " + pos);
+                    m_networkManager->sendMovePacket(me->getNick(), Up, x, y);
                     me->setDirection(Up);
-                    qDebug() << "UP";
                }
                break;
          case Bomb:
@@ -346,8 +334,7 @@ void CGameBoard::OnUpdate()
          if (me->getDirection() != Stopped && me->getElapsedTime() >= me->getStopTime())
          {
              me->setDirection(Stopped);
-             send(m_socket, "MOVE " + me->getNick() + " STOP " + pos);
-             qDebug() << "STOP";
+             m_networkManager->sendMovePacket(me->getNick(), Stopped, x, y);
              me->Pause();
          }
      }
@@ -692,36 +679,32 @@ void CGameBoard::drawBonusCanvas()
             if (!m_bonusCanvas->isPaused())
             {
                 /* Let's check which bonus we've got */
-                switch (m_bonusCanvas->getBonus()->getType())
+                CBonus::BonusType type;
+                switch ((type = m_bonusCanvas->getBonus()->getType()))
                 {
                 case CBonus::BombDown:
                     me->addBonus(new CBonus(CBonus::BombDown));
                     break;
                 case CBonus::BombUp:
                     me->addBonus(new CBonus(CBonus::BombUp));
-                    send(m_socket, "BONUS " + me->getNick() + " BOMBUP");
                     break;
                 case CBonus::SpeedDown:
                     if (me->getBonus(CBonus::SpeedDown) == NULL)
                     {
                         me->addBonus(new CLimitedBonus(CBonus::SpeedDown, 10.f));
-                        send(m_socket, "BONUS " + me->getNick() + " SPEEDDOWN");
                     }
                     break;
                 case CBonus::SpeedUp:
                     if (me->getBonus(CBonus::SpeedUp) == NULL)
                     {
                         me->addBonus(new CLimitedBonus(CBonus::SpeedUp, 10.f));
-                        send(m_socket, "BONUS " + me->getNick() + " SPEEDUP");
                     }
                     break;
                 case CBonus::FireUp:
                     me->addBonus(new CBonus(CBonus::FireUp));
-                    send(m_socket, "BONUS " + me->getNick() + " FIREUP");
                     break;
                 case CBonus::FireDown:
                     me->addBonus(new CBonus(CBonus::FireDown));
-                    send(m_socket, "BONUS " + me->getNick() + " FIREDOWN");
                     break;
                 case CBonus::FullFire:
                     me->addBonus(new CBonus(CBonus::FullFire));
@@ -730,21 +713,19 @@ void CGameBoard::drawBonusCanvas()
                     if (me->getBonus(CBonus::RemoteMine) == NULL)
                     {
                         me->addBonus(new CBonus(CBonus::RemoteMine));
-                        send(m_socket, "BONUS " + me->getNick() + " REMOTEMINE");
                     }
                 case CBonus::BombPass:
                     me->removeBonus(CBonus::BombKick);
                     me->addBonus(new CBonus(CBonus::BombPass));
-                    send(m_socket, "BONUS " + me->getNick() + " BOMBPASS");
                     break;
                 case CBonus::BombKick:
                     me->removeBonus(CBonus::BombPass);
                     me->addBonus(new CBonus(CBonus::BombKick));
-                    send(m_socket, "BONUS " + me->getNick() + " BOMBKICK");
                     break;
                 default:
                     break;
                 }
+                m_networkManager->sendBonusPacket(me->getNick(), type);
                 m_bonusCanvas->Pause();
             }
             else
@@ -791,7 +772,6 @@ void CGameBoard::plantBomb()
     CPlayer *me = m_playersList[0];
     unsigned x = 0, y = 0;
 
-    qDebug() << me->pausedBombs << " " << me->maxBombs;
     if (me->pausedBombs == me->maxBombs) /* We reached the limit */
     {
         return;
@@ -799,8 +779,6 @@ void CGameBoard::plantBomb()
     x = me->getX();
     y = me->getY();
     m_map.setBlock(x, y, Bomb);
-
-    QString pos = QString("%1 %2").arg(x).arg(y);
 
     CBonus *bonus;
     bool hasUsed;
@@ -820,19 +798,19 @@ void CGameBoard::plantBomb()
         if (!hasUsed)
         {
             m_bombsList.append(new CBomb(x, y, CBomb::Remote, me->getNick()));
-            send(m_socket, "BOMB " + me->getNick() + " " + pos.toStdString() + " REMOTE");
+            m_networkManager->sendBombPacket(me->getNick(), x, y, CBomb::Remote);
         }
         else
         {
             m_bombsList.append(new CBomb(x, y, CBomb::Normal, me->getNick()));
-            send(m_socket, "BOMB " + me->getNick() + " " + pos.toStdString() + " NORMAL");
+            m_networkManager->sendBombPacket(me->getNick(), x, y, CBomb::Normal);
         }
 
     }
     else
     {
         m_bombsList.append(new CBomb(x, y, CBomb::Normal, me->getNick()));
-        send(m_socket, "BOMB " + me->getNick() + " " + pos.toStdString() + " NORMAL");
+        m_networkManager->sendBombPacket(me->getNick(), x, y, CBomb::Normal);
     }
     me->pausedBombs++;
     QSound::play("../plant.wav");
@@ -870,23 +848,16 @@ void CGameBoard::useSpecialBonus()
             m_map.setBlock(x, y, Floor);
             me->pausedBombs--;
             me->removeBonus(CBonus::RemoteMine);
-            send(m_socket, "BOOM " + me->getNick() + " " + pos.toStdString());
+            m_networkManager->sendBoomPacket(me->getNick(), x, y);
         }
     }
 }
 
 void CGameBoard::plantedBomb(const std::string &bomber, unsigned x, unsigned y,
-                             const std::string &type)
+                             CBomb::BombType type)
 {
     m_map.setBlock(x, y, Bomb);
-    if (type == "NORMAL")
-    {
-        m_bombsList.append(new CBomb(x, y, CBomb::Normal, bomber));
-    }
-    else
-    {
-        m_bombsList.append(new CBomb(x, y, CBomb::Remote, bomber));
-    }
+    m_bombsList.append(new CBomb(x, y, type, bomber));
     QSound::play("../plant.wav");
 }
 
@@ -920,6 +891,7 @@ void CGameBoard::setPlayerColor(std::string color)
 void CGameBoard::setSocket(QTcpSocket *socket)
 {
     m_socket = socket;
+    m_networkManager->setSocket(socket);
 }
 
 void CGameBoard::setNick(const std::string &nick){
@@ -995,74 +967,38 @@ void CGameBoard::playerLeft(const std::string &nick)
     }
 }
 
-void CGameBoard::playerMove(const std::string &nick, const std::string &move, const float x, const float y)
+void CGameBoard::playerMove(const std::string &nick, Direction direction, const float x, const float y)
 {
     CPlayer *player = getPlayerFromNick(nick);
     assert(player != NULL);
-    if (move == "LEFT")
+    player->setDirection(direction);
+    if (direction == Stopped)
     {
-        player->setDirection(Left);
-        player->Play();
+        player->Pause();
     }
-    else if (move == "RIGHT")
+    else
     {
-        player->setDirection(Right);
         player->Play();
-    }
-    else if (move == "UP")
-    {
-        player->setDirection(Up);
-        player->Play();
-    }
-    else if (move == "DOWN")
-    {
-        player->setDirection(Down);
-        player->Play();
-    }
-    else if (move == "STOP")
-    {
-        player->setDirection(Stopped);
-        player->Stop();
     }
     player->SetPosition(x, y);
 }
 
-void CGameBoard::playerGotBonus(const std::string &nick, const std::string &bonus)
+void CGameBoard::playerGotBonus(const std::string &nick, CBonus::BonusType type)
 {
     CPlayer *player = getPlayerFromNick(nick);
     assert(player != NULL);
 
-    if (bonus == "SPEEDUP")
+    if (type == CBonus::SpeedUp)
     {
         player->addBonus(new CLimitedBonus(CBonus::SpeedUp, 10.0f));
     }
-    else if (bonus == "SPEEDDOWN")
+    else if (type == CBonus::SpeedDown)
     {
         player->addBonus(new CLimitedBonus(CBonus::SpeedDown, 10.0f));
     }
-    else if (bonus == "BOMBUP")
+    else
     {
-        player->addBonus(new CBonus(CBonus::BombUp));
-    }
-    else if (bonus == "FIREUP")
-    {
-        player->addBonus(new CBonus(CBonus::FireUp));
-    }
-    else if (bonus == "FIREDOWN")
-    {
-        player->addBonus(new CBonus(CBonus::FireDown));
-    }
-    else if (bonus == "FULLFIRE")
-    {
-        player->addBonus(new CBonus(CBonus::FullFire));
-    }
-    else if (bonus == "BOMBPASS")
-    {
-        player->addBonus(new CBonus(CBonus::BombPass));
-    }
-    else if (bonus == "BOMBKICK")
-    {
-        player->addBonus(new CBonus(CBonus::BombKick));
+        player->addBonus(new CBonus(type));
     }
 }
 

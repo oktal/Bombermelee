@@ -18,8 +18,10 @@ public:
         Undefined,
         Ehlo, /* EHLO on connect */
         Nick, /* NICK */
+        Badnick,
         Users, /* USERS Request */
         Say,
+        Map,
         Move, /* Player MOVE */
         Bomb, /* Player plants a BOMB */
         Bonus, /* Player got a BONUS */
@@ -54,9 +56,8 @@ private:
     QHostAddress getLocalIpAddress();
     bool nickAlreadyInUse(const QString &nick);
     void appendToConsole(const QString &text);
-    void readProtocolHeader();
     void processData(QTcpSocket *sender);
-    void broadcast(const QString &message, QTcpSocket *except);
+    void broadcast(const QByteArray &data, QTcpSocket *except = 0);
     CClient *getClientFromNick(const QString &nick);
 };
 

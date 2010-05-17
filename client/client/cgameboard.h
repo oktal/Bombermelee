@@ -13,6 +13,8 @@
 #include "cexplosion.h"
 #include "cbonuscanvas.h"
 #include "cbomb.h"
+#include "cnetworkmanager.h"
+#include "cbonus.h"
 
 static const unsigned WarmupTime = 5; /* 5 seconds before the game begins */
 
@@ -32,12 +34,12 @@ public:
     void setNick(const std::string &nick);
     void newPlayer(const std::string &nick, const std::string &color);
     void playerLeft(const std::string &nick);
-    void playerMove(const std::string &nick, const std::string &move, const float x, const float y);
-    void playerGotBonus(const std::string &nick, const std::string &bonus);
+    void playerMove(const std::string &nick, Direction direction, const float x, const float y);
+    void playerGotBonus(const std::string &nick, CBonus::BonusType type);
     void remoteExplode(const std::string &bomber, unsigned x, unsigned y);
     void setMap(std::string map);
     void plantedBomb(const std::string &bomber, unsigned x, unsigned y,
-                     const std::string &type);
+                     CBomb::BombType type);
     void setConnected(bool connected);
 
 private:
@@ -69,6 +71,7 @@ private:
     QTcpSocket *m_socket;
     QTimer *warmupTimer;
     CBonusCanvas *m_bonusCanvas;
+    CNetworkManager *m_networkManager;
     bool m_gameBegin;
     bool m_connected;
     unsigned m_warmupTime;

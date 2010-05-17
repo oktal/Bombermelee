@@ -116,7 +116,8 @@ void CServer::onConnect()
     QTcpSocket *socket = m_server->nextPendingConnection();
     if (m_clientsList.size() == MaximumSlots)
     {
-        send(socket, "FULL");
+        CNetworkManager networkManager(socket);
+        networkManager.sendFullPacket();
         return;
     }
     QObject::connect(socket, SIGNAL(readyRead()), this, SLOT(processReadyRead()));
@@ -140,16 +141,20 @@ void CServer::onDisconnect()
             break;
         }
     }
-    broadcast("PART " + nick, socket);
 
-
+    QList<CClient *>::const_iterator it;
+    for (it = m_clientsList.begin(); it != m_clientsList.end(); ++it)
+    {
+        CClient *client = *it;
+        client->networkManager->sendPartPacket(nick);
+    }
 }
 
 void CServer::processReadyRead()
 {
     /* sender of the message */
     QTcpSocket *socket = qobject_cast<QTcpSocket *>(sender());
-    if (socket->bytesAvailable() < (int)sizeof(quint16))
+    if (socket->bytesAvailable() < (int)sizeof(quint32))
     {
         return;
     }
@@ -157,137 +162,104 @@ void CServer::processReadyRead()
     do
     {
         QByteArray c = socket->read(1);
-        /* A valid message must be ended by "\r\n". If not, we don't treat it */
-        if (c == "\r")
-        {
-            if ((c = socket->read(1)) != "\n")
-            {
-                return;
-            }
-        }
-        else
-        {
-            m_buffer.append(c);
-        }
+        m_buffer.append(c);
     } while (socket->bytesAvailable());
-    appendToConsole(m_buffer.constData());
-    readProtocolHeader();
     processData(socket);
-}
-
-/**
-  * Read the protocol Header
-*/
-void CServer::readProtocolHeader()
-{
-    QStringList l = QString(m_buffer.data()).split(SeparatorToken);
-    if (l[0] == "EHLO")
-    {
-        messageType = Ehlo;
-    }
-    else if (l[0] == "NICK")
-    {
-        messageType = Nick;
-    }
-    else if (l[0] == "PONG")
-    {
-        messageType = Pong;
-    }
-    else if (l[0] == "USERS")
-    {
-        messageType = Users;
-    }
-    else if (l[0] == "SAY")
-    {
-        messageType = Say;
-    }
-    else if (l[0] == "MOVE")
-    {
-        messageType = Move;
-    }
-    else if (l[0] == "BOMB")
-    {
-        messageType = Bomb;
-    }
-    else if (l[0] == "BONUS")
-    {
-        messageType = Bonus;
-    }
-    else if (l[0] == "BOOM")
-    {
-        messageType = Boom;
-    }
-    else
-    {
-        messageType = Undefined;
-    }
 }
 
 void CServer::processData(QTcpSocket *sender)
 {
-    QStringList l = QString(m_buffer.data()).split(SeparatorToken);
-    switch (messageType)
+    quint32 packet;
+    CNetworkManager networkManager(sender);
+    QDataStream in(&m_buffer, QIODevice::ReadOnly);
+    in.setVersion(QDataStream::Qt_4_6);
+
+    quint32 blockSize;
+    in >> blockSize;
+
+    if (!blockSize ||
+        static_cast<quint32>(m_buffer.size() - sizeof(quint32)) != blockSize)
     {
-    case Ehlo:
-        send(sender, "EHLO");
+        qDebug() << "Invalid packet received";
+        return;
+    }
+
+    in >> packet;
+
+    switch (static_cast<CNetworkManager::PacketType>(packet))
+    {
+    case CNetworkManager::Ehlo:
+        qDebug() << "Received Ehlo Packet";
+        networkManager.sendEhloPacket();
         break;
-    case Nick:
-        /* Let's check if request is conformly formed */
-        if (l.size() < 1)
+    case CNetworkManager::Nick:
+        qDebug() << "Received Nick Packet";
         {
-            return;
-        }
-        /* Let's check if nick is not already in use */
-        if (nickAlreadyInUse(l[1]))
-        {
-            send(sender, "BADNICK");
-            return;
-        }
-        {
+            QString nick;
+            in >> nick;
+            if (nickAlreadyInUse(nick))
+            {
+                networkManager.sendBadnickPacket();
+                return;
+            }
+
             QString color = m_colors[rand() % m_colors.size()];
-            CClient *newClient = new CClient(sender, l[1], color);
+            CClient *newClient = new CClient(sender, nick, color);
             m_colors.removeOne(color);
-            send(sender, "OK " + color.toStdString());
-            appendToConsole(tr("<strong>%1</strong> has joined").arg(l[1]));
+            networkManager.sendOkPacket(color);
+            appendToConsole(tr("<strong>%1</strong> has joined").arg(nick));
             m_clientsList.append(newClient);
-            broadcast("JOIN " + l[1] + " " + color, sender);
+
+            QList<CClient *>::iterator it;
+            for (it = m_clientsList.begin(); it != m_clientsList.end(); ++it)
+            {
+                CClient *client = *it;
+                if (client->getSocket() != sender)
+                {
+                    client->networkManager->sendJoinPacket(nick, color);
+                }
+            }
+
         }
         break;
-    case Users:
+    case CNetworkManager::Users:
+        qDebug() << "Received Users Packet";
         {
              /* Send the whole users list */
-             QString response = "USERS ";
+             QList<QString> users;
              for (int i = 0; i < m_clientsList.size(); ++i)
              {
-                 response += m_clientsList[i]->getNick() + ":" + m_clientsList[i]->getColor();
-                 if (i < m_clientsList.count() - 1)
-                 {
-                    response += " ";
-                }
+                 QString user = m_clientsList[i]->getNick() + ":" + m_clientsList[i]->getColor();
+                 users.push_back(user);
              }
-            send(sender, response.toStdString());
+             networkManager.sendUsersPacket(users);
         }
         break;
-    case Say:
-        /* Broadcast the message to all over clients */
-        broadcast(QString(m_buffer.data()), sender);
+    case CNetworkManager::Say:
+        qDebug() << "Received Say Packet";
+        broadcast(m_buffer);
         break;
-    case Move:
-        broadcast(QString(m_buffer.data()), sender);
+    case CNetworkManager::Move:
+        qDebug() << "Received Move Packet";
+        broadcast(m_buffer);
         break;
-    case Bomb:
-        broadcast(QString(m_buffer.data()), sender);
+    case CNetworkManager::Bomb:
+        qDebug() << "Received Bomb Packet";
+        broadcast(m_buffer);
         break;
-    case Bonus:
-        broadcast(QString(m_buffer.data()), sender);
+    case CNetworkManager::Bonus:
+        qDebug() << "Received Bonus Packet";
+        broadcast(m_buffer);
         break;
-    case Boom:
-        broadcast(QString(m_buffer.data()), sender);
+    case CNetworkManager::Boom:
+        qDebug() << "Received Boom Packet";
+        broadcast(m_buffer);
         break;
-    case Pong:
-    case Undefined:
+    case CNetworkManager::Pong:
+    case CNetworkManager::Undefined:
         break;
-
+    default:
+        break;
     }
 }
 
@@ -312,7 +284,7 @@ CClient *CServer::getClientFromNick(const QString &nick)
   * Broadcast a message to all connected clients
 */
 
-void CServer::broadcast(const QString &message, QTcpSocket *except)
+void CServer::broadcast(const QByteArray &data, QTcpSocket *except)
 {
     QList<CClient *>::const_iterator it = m_clientsList.constBegin();
     while (it != m_clientsList.constEnd())
@@ -320,7 +292,7 @@ void CServer::broadcast(const QString &message, QTcpSocket *except)
         CClient *client = *it;
         if (client->getSocket() != except)
         {
-            client->send(message.toStdString());
+            client->send(data);
         }
         ++it;
     }
@@ -331,8 +303,12 @@ void CServer::sendMapToClients()
     CMapGen map;
     std::string request;
     map.generateMap();
-    request = "MAP " + map.getMap();
-    broadcast(QString(request.c_str()), NULL);
+    QList<CClient *>::const_iterator it;
+    for (it = m_clientsList.begin(); it != m_clientsList.end(); ++it)
+    {
+        CClient *client = *it;
+        client->networkManager->sendMapPacket(map.getMap());
+    }
 }
 
 bool CServer::nickAlreadyInUse(const QString &nick)
@@ -344,6 +320,7 @@ void CServer::appendToConsole(const QString &text)
 {
     m_console->append(text);
 }
+
 
 
 CServer::~CServer()

@@ -5,6 +5,7 @@
 #include <QtGui>
 #include <QTcpSocket>
 #include "cgameboard.h"
+#include "cnetworkmanager.h"
 
 class CClient : public QWidget
 {
@@ -46,9 +47,9 @@ private:
     QList<QString> m_usersList;
 
     DataMessageType messageType;
+    CNetworkManager *m_networkManager;
 
-    void connectToServer() const;
-    void readProtocolHeader();
+    void connectToServer();
     void processData();
     void appendToChatBox(const QString &text);
     void appendToUsersList(const QString &nick, const QString &color);
