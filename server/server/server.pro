@@ -12,8 +12,10 @@ SOURCES += main.cpp \
     cserver.cpp \
     cmapgen.cpp \
     cclient.cpp \
-    cnetworkmanager.cpp
+    cnetworkmanager.cpp \
+    cloger.cpp
 HEADERS += cserver.h \
     cmapgen.h \
     cclient.h \
-    cnetworkmanager.h
+    cnetworkmanager.h \
+    cloger.h
