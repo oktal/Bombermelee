@@ -6,6 +6,7 @@
 #include <QTcpServer>
 #include <QHash>
 #include "cclient.h"
+#include "cloger.h"
 
 class CServer : public QMainWindow {
     Q_OBJECT
@@ -51,6 +52,7 @@ private:
     QList<CClient *> m_clientsList;
     QList<QString> m_colors;
     DataMessageType messageType;
+    CLoger *m_loger;
 
     void startServer();
     QHostAddress getLocalIpAddress();

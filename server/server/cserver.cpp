@@ -27,17 +27,6 @@ static const quint16 DefaultPort = 45000;
 static const quint16 MaximumSlots = 4; /* 4 Players maximum */
 static const QChar SeparatorToken = ' ';
 
-static void send(QTcpSocket *to, const std::string &what)
-{
-    const qint64 len = what.length() + 2;
-    qint64 bytesWritten;
-    do
-    {
-        bytesWritten = to->write(_m(what));
-        to->waitForBytesWritten();
-    } while (bytesWritten != len);
-}
-
 CServer::CServer(QWidget *parent) :
     QMainWindow(parent)
 {
@@ -71,6 +60,7 @@ CServer::CServer(QWidget *parent) :
 
     startServer();
     QObject::connect(m_btn_launch, SIGNAL(clicked()), this, SLOT(sendMapToClients()));
+    m_loger = new CLoger("games.log");
 }
 
 void CServer::startServer()
@@ -83,7 +73,6 @@ void CServer::startServer()
     setWindowTitle(tr("Bombermelee Dedicated Server - listening on %1:%2").arg(m_server->serverAddress().toString()
                                                                           ).arg(m_server->serverPort()));
     QObject::connect(m_server, SIGNAL(newConnection()), this, SLOT(onConnect()));
-
 }
 
 /**
@@ -174,6 +163,8 @@ void CServer::processData(QTcpSocket *sender)
     QDataStream in(&m_buffer, QIODevice::ReadOnly);
     in.setVersion(QDataStream::Qt_4_6);
 
+    m_loger->logPacket(m_buffer);
+
     quint32 blockSize;
     in >> blockSize;
 
@@ -185,6 +176,7 @@ void CServer::processData(QTcpSocket *sender)
     }
 
     in >> packet;
+    QString s;
 
     switch (static_cast<CNetworkManager::PacketType>(packet))
     {
@@ -236,23 +228,28 @@ void CServer::processData(QTcpSocket *sender)
         }
         break;
     case CNetworkManager::Say:
-        qDebug() << "Received Say Packet";
+        in >> s;
+        qDebug() << "Received Say Packet from " << s;
         broadcast(m_buffer);
         break;
     case CNetworkManager::Move:
-        qDebug() << "Received Move Packet";
+        in >> s;
+        qDebug() << "Received Move Packet from " << s;
         broadcast(m_buffer);
         break;
     case CNetworkManager::Bomb:
-        qDebug() << "Received Bomb Packet";
+        in >> s;
+        qDebug() << "Received Bomb Packet from " << s;
         broadcast(m_buffer);
         break;
     case CNetworkManager::Bonus:
-        qDebug() << "Received Bonus Packet";
+        in >> s;
+        qDebug() << "Received Bonus Packet from " << s;
         broadcast(m_buffer);
         break;
     case CNetworkManager::Boom:
-        qDebug() << "Received Boom Packet";
+        in >> s;
+        qDebug() << "Received Boom Packet from " << s;
         broadcast(m_buffer);
         break;
     case CNetworkManager::Pong:
