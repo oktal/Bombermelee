@@ -7,30 +7,13 @@
 #include "cgameboard.h"
 #include "cnetworkmanager.h"
 
+static const float PingSendingTime = 500; /* Each 500ms we send a Ping Packet */
+
 class CClient : public QWidget
 {
     Q_OBJECT
 public:
     CClient(QWidget *parent, const QString &address, const QString &nick);
-    enum DataMessageType
-    {
-        Undefined,
-        Full,
-        Ehlo,
-        Badnick, /* BADNICK */
-        Ok,
-        Join,
-        Part,
-        Users,
-        Say,
-        Move,
-        Map,
-        Boom, /* A bomb explode */
-        Bomb,
-        Bonus,
-        /* For future */
-        Ping /* Ping Request */
-    };
 
 private:
     QTextEdit *m_chatBox;
@@ -45,8 +28,9 @@ private:
     QString m_nick;
 
     QList<QString> m_usersList;
+    QTimer *m_pingTimer;
+    QTime m_pingTime;
 
-    DataMessageType messageType;
     CNetworkManager *m_networkManager;
 
     void connectToServer();
@@ -60,7 +44,7 @@ private slots:
     void onError();
     void processReadyRead();
     void sendMessage();
-
+    void sendPing();
 
 };
 

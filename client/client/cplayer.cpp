@@ -34,7 +34,7 @@ CPlayer::CPlayer(const std::string &nick, const std::string &color) :
     pausedBombs = 0;
     maxBombs = 1; /* 1 bomb maximum at the begining */
     bombRange = 1;
-    gotBonus = false; /* No bonus */
+    score = 0;
 
     /* UP ANIMATION */
     m_player_up.PushFrame(Frame(&m_img_player, sf::Rect<int>(2, 32, 18, 55)));
@@ -126,6 +126,11 @@ void CPlayer::setDirection(Direction direction)
 Direction CPlayer::getDirection() const
 {
     return m_direction;
+}
+
+const std::string &CPlayer::getColor() const
+{
+    return m_color;
 }
 
 /**

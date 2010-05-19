@@ -28,7 +28,8 @@ public:
         Bonus     = Bomb << 1,
         Boom      = Bonus << 1,
         /* For future */
-        Pong      = Boom << 1
+        Ping      = Boom << 1,
+        Pong      = Ping << 1
     };
 
 
@@ -42,6 +43,8 @@ public:
     void sendPartPacket(const QString &nick);
     void sendFullPacket();
     void sendMapPacket(const std::string &map);
+    void sendPingPacket();
+    void sendPongPacket();
 
 private:
     void sendData(QByteArray block);

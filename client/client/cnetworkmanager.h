@@ -31,7 +31,8 @@ public:
         Bonus     = Bomb << 1,
         Boom      = Bonus << 1,
         /* For future */
-        Pong      = Boom << 1
+        Ping      = Boom << 1,
+        Pong      = Ping << 1
     };
 
     CNetworkManager(QTcpSocket *socket = 0);
@@ -44,6 +45,8 @@ public:
     void sendBonusPacket(const std::string &nick, CBonus::BonusType type);
     void sendUsersPacket();
     void sendSayPacket(const QString &nick, const QString &message);
+    void sendPingPacket();
+    void sendPongPacket();
 
 private:
     void sendData(QByteArray block);

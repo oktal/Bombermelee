@@ -45,6 +45,8 @@ CGameBoard::CGameBoard(QWidget *parent, const QPoint &position, const QSize &siz
     m_gameBegin = true;
     m_connected = true;
     m_warmupTime = 0;
+    m_frameRate = 0.0f;
+    m_pingTime = 0;
     m_status = Waiting_Players;
     m_bonusCanvas = NULL;
     m_networkManager = new CNetworkManager();
@@ -114,7 +116,11 @@ void CGameBoard::OnUpdate()
     sf::Shape rightBorder = sf::Shape::Rectangle(510, 0, 630, 510, sf::Color(127, 127, 127));
     Draw(rightBorder);
 
-    m_frameRate = 1.f / GetFrameTime();
+    if (m_fpsRefreshTime.GetElapsedTime() >= 1.0f)
+    {
+        m_frameRate = 1.f / GetFrameTime();
+        m_fpsRefreshTime.Reset();
+    }
     drawMap();
     drawFPS();
     drawStatus();
@@ -450,6 +456,7 @@ void CGameBoard::drawMap()
 
 void CGameBoard::drawPlayers()
 {
+    unsigned rectx = 520, recty = 70;
     for (int i = 0; i < m_playersList.size(); ++i)
     {
         CPlayer *player = m_playersList[i];
@@ -554,6 +561,43 @@ void CGameBoard::drawPlayers()
         }
         player->anim(GetFrameTime());
         Draw(*player);
+
+        sf::Color rectColor;
+        const std::string &playerColor = player->getColor();
+        if (playerColor == "red")
+        {
+            rectColor = sf::Color(255, 0, 0);
+        }
+        else if (playerColor == "blue")
+        {
+            rectColor = sf::Color(9, 169, 255);
+        }
+        else if (playerColor == "green")
+        {
+            rectColor = sf::Color(3, 180, 32);
+        }
+        else
+        {
+            rectColor = sf::Color(128, 128, 128);
+        }
+
+        sf::Shape rect = sf::Shape::Rectangle(rectx, recty, rectx + 100, recty + 15, rectColor, 1.0f,
+                                              sf::Color::Black);
+        Draw(rect);
+        sf::String nick;
+        nick.SetText(player->getNick());
+        nick.SetPosition(rectx + 5, recty + 2);
+        nick.SetSize(10.0f);
+        nick.SetStyle(sf::String::Bold);
+        Draw(nick);
+        sf::String score;
+        score.SetText(QString("%1").arg(player->score).toStdString());
+        score.SetPosition(rectx + 90, recty + 2);
+        score.SetSize(10.0f);
+        score.SetStyle(sf::String::Bold);
+        Draw(score);
+        recty += 20;
+
     }
 }
 
@@ -600,10 +644,19 @@ void CGameBoard::drawExplosions()
 
 void CGameBoard::drawFPS()
 {
+    sf::Shape rect = sf::Shape::Rectangle(520, 20, 620, 40, sf::Color::Black, 1.0f, sf::Color::Black);
+    Draw(rect);
     sf::String FPS(QString("%1 FPS").arg(static_cast<unsigned>(m_frameRate)).toStdString());
-    FPS.SetPosition(580, 0);
-    FPS.SetSize(15);
+    FPS.SetPosition(525, 25);
+    FPS.SetSize(10.0f);
+    FPS.SetStyle(sf::String::Bold);
     Draw(FPS);
+
+    sf::String ping(QString("%1 ping").arg(m_pingTime).toStdString());
+    ping.SetPosition(580, 25);
+    ping.SetSize(10.0f);
+    ping.SetStyle(sf::String::Bold);
+    Draw(ping);
 }
 
 /**
@@ -896,6 +949,11 @@ void CGameBoard::setSocket(QTcpSocket *socket)
 
 void CGameBoard::setNick(const std::string &nick){
     m_playersList[0]->setNick(nick);
+}
+
+void CGameBoard::setPingTime(unsigned pingTime)
+{
+    m_pingTime = pingTime;
 }
 
 /**
