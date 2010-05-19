@@ -72,6 +72,7 @@ public:
     float getElapsedTime() const;
     unsigned getSpeed() const;
     const std::string &getNick() const;
+    const std::string &getColor() const;
     Direction getDirection() const;
 
     BlockType getCollision(Direction direction, CMap &map);
@@ -93,7 +94,7 @@ public:
     unsigned maxBombs;
     unsigned pausedBombs;
     unsigned bombRange;
-    bool gotBonus;
+    unsigned score;
 
 
 private:

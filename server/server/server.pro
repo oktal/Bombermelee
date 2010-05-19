@@ -19,3 +19,5 @@ HEADERS += cserver.h \
     cclient.h \
     cnetworkmanager.h \
     cloger.h
+
+win32:LIBS += -lws2_32

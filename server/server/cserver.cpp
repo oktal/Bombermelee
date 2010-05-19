@@ -169,7 +169,7 @@ void CServer::processData(QTcpSocket *sender)
     in >> blockSize;
 
     if (!blockSize ||
-        static_cast<quint32>(m_buffer.size() - sizeof(quint32)) != blockSize)
+        static_cast<quint32>(m_buffer.size()) != blockSize)
     {
         qDebug() << "Invalid packet received";
         return;
@@ -183,6 +183,9 @@ void CServer::processData(QTcpSocket *sender)
     case CNetworkManager::Ehlo:
         qDebug() << "Received Ehlo Packet";
         networkManager.sendEhloPacket();
+        break;
+    case CNetworkManager::Ping:
+        networkManager.sendPongPacket();
         break;
     case CNetworkManager::Nick:
         qDebug() << "Received Nick Packet";

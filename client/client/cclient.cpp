@@ -68,10 +68,13 @@ CClient::CClient(QWidget *parent, const QString &address, const QString &nick) :
     m_socket = new QTcpSocket();
     m_gameBoard->setSocket(m_socket);
 
+    m_pingTimer = new QTimer(this);
+    m_pingTimer->start(PingSendingTime);
+
     QObject::connect(m_btn_send, SIGNAL(clicked()), this, SLOT(sendMessage()));
+    QObject::connect(m_pingTimer, SIGNAL(timeout()), this, SLOT(sendPing()));
 
     setFixedSize(650, 680);
-    messageType = Undefined;
     connectToServer();
 }
 
@@ -96,6 +99,12 @@ void CClient::onError()
     CConnect *c = new CConnect();
     c->show();
     close();
+}
+
+void CClient::sendPing()
+{
+    m_networkManager->sendPingPacket();
+    m_pingTime.restart();
 }
 
 void CClient::processReadyRead()
@@ -125,7 +134,7 @@ void CClient::processData()
     in >> blockSize;
 
     if (!blockSize ||
-        static_cast<quint32>(m_buffer.size() - sizeof(quint32)) != blockSize)
+        static_cast<quint32>(m_buffer.size()) != blockSize)
     {
         qDebug() << "Invalid packet received";
         return;
@@ -165,6 +174,11 @@ void CClient::processData()
             m_gameBoard->setConnected(true);
             setWindowTitle(m_nick + " connected on " + m_address);
             m_networkManager->sendUsersPacket();
+        }
+        break;
+    case CNetworkManager::Pong:
+        {
+            m_gameBoard->setPingTime(static_cast<unsigned>(m_pingTime.elapsed()));
         }
         break;
     case CNetworkManager::Join:

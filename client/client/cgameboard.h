@@ -16,6 +16,8 @@
 #include "cnetworkmanager.h"
 #include "cbonus.h"
 
+#include <SFML/System.hpp>
+
 static const unsigned WarmupTime = 5; /* 5 seconds before the game begins */
 
 enum Status
@@ -32,15 +34,20 @@ public:
     void setPlayerColor(std::string color);
     void setSocket(QTcpSocket *socket);
     void setNick(const std::string &nick);
+
     void newPlayer(const std::string &nick, const std::string &color);
     void playerLeft(const std::string &nick);
     void playerMove(const std::string &nick, Direction direction, const float x, const float y);
     void playerGotBonus(const std::string &nick, CBonus::BonusType type);
     void remoteExplode(const std::string &bomber, unsigned x, unsigned y);
+
+    void pongReceived();
+
     void setMap(std::string map);
     void plantedBomb(const std::string &bomber, unsigned x, unsigned y,
                      CBomb::BombType type);
     void setConnected(bool connected);
+    void setPingTime(unsigned pingTime);
 
 private:
     /* private methods */
@@ -76,8 +83,10 @@ private:
     bool m_connected;
     unsigned m_warmupTime;
     float m_frameRate;
+    unsigned m_pingTime;
     CMap m_map;
     Status m_status;
+    sf::Clock m_fpsRefreshTime;
 
 private slots:
     void checkWarmupTime();

@@ -4,12 +4,14 @@ CONFIG += debug \
 INCLUDEPATH += C:\Qt\2010.02.1\mingw\include \
     LIBPATH \
     = \
-    -L"C:\Program Files\CodeBlocks\MinGW\lib"
+    -L"C:\Qt\2010.02.1\mingw\lib"
 LIBS += -lsfml-audio-d \
     -lsfml-graphics-d \
     -lsfml-window-d \
     -lsfml-system-d \
     -lsfml-main
+
+win32:LIBS += -lws2_32
 DEFINES += SFML_DYNAMIC
 HEADERS += cconnect.h \
     QSFMLCanvas.hpp \
