@@ -12,26 +12,25 @@ public:
     {
         Undefined = 1,
 
-        Ehlo      = Undefined << 1,
-        Ok        = Ehlo << 1,
-        Badnick   = Ok << 1,
-        Full      = Badnick << 1,
-        Users     = Full << 1,
-        Map       = Users << 1,
-        Join      = Map << 1,
-        Part      = Join << 1,
+        Ehlo      = 1 << 1,
+        Ok        = 1 << 2,
+        Badnick   = 1 << 3,
+        Full      = 1 << 4,
+        Users     = 1 << 5,
+        Map       = 1 << 6,
+        Join      = 1 << 7,
+        Part      = 1 << 8,
 
-        Nick      = Part << 1,
-        Say       = Nick << 1,
-        Move      = Say << 1,
-        Bomb      = Move << 1,
-        Bonus     = Bomb << 1,
-        Boom      = Bonus << 1,
+        Nick      = 1 << 9,
+        Say       = 1 << 10,
+        Move      = 1 << 11,
+        Bomb      = 1 << 12,
+        Bonus     = 1 << 13,
+        Boom      = 1 << 14,
         /* For future */
-        Ping      = Boom << 1,
-        Pong      = Ping << 1
+        Ping      = 1 << 15,
+        Pong      = 1 << 16,
     };
-
 
     CNetworkManager(QTcpSocket *socket = 0);
     void setSocket(QTcpSocket *socket);
@@ -42,13 +41,15 @@ public:
     void sendJoinPacket(const QString &nick, const QString &color);
     void sendPartPacket(const QString &nick);
     void sendFullPacket();
-    void sendMapPacket(const std::string &map);
+    void sendMapPacket(const std::string &map, int roundsNomber);
     void sendPingPacket();
     void sendPongPacket();
+    QList<QByteArray> getPacketsFromBuffer(QByteArray &buffer);
 
 private:
     void sendData(QByteArray block);
     QTcpSocket *m_socket;
+    QByteArray m_endOfFrame;
 };
 
 #endif // CNETWORKMANAGER_H

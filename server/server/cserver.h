@@ -14,23 +14,6 @@ public:
     CServer(QWidget *parent = 0);
     ~CServer();
 
-    enum DataMessageType
-    {
-        Undefined,
-        Ehlo, /* EHLO on connect */
-        Nick, /* NICK */
-        Badnick,
-        Users, /* USERS Request */
-        Say,
-        Map,
-        Move, /* Player MOVE */
-        Bomb, /* Player plants a BOMB */
-        Bonus, /* Player got a BONUS */
-        Boom, /* Player used remote mine bonus */
-        /* For future */
-        Pong /* Pong Answer */
-    };
-
 protected:
     void changeEvent(QEvent *e);
 
@@ -46,19 +29,20 @@ private:
     QPushButton *m_btn_pause;
     QLineEdit *m_message;
     QPushButton *m_btn_send;
+    QSpinBox *m_spn_round;
 
     QTcpServer *m_server;
     QByteArray m_buffer;
     QList<CClient *> m_clientsList;
     QList<QString> m_colors;
-    DataMessageType messageType;
     CLoger *m_loger;
 
     void startServer();
     QHostAddress getLocalIpAddress();
     bool nickAlreadyInUse(const QString &nick);
     void appendToConsole(const QString &text);
-    void processData(QTcpSocket *sender);
+    void readData(QTcpSocket *sender);
+    void processData(QTcpSocket *sender, QByteArray buffer);
     void broadcast(const QByteArray &data, QTcpSocket *except = 0);
     CClient *getClientFromNick(const QString &nick);
 };

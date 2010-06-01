@@ -39,10 +39,11 @@ void CLoger::logPacket(QByteArray buffer)
     QString sender, nick;
     float f_x, f_y;
     unsigned u_x, u_y;
-    in >> blockSize;
     in >> packet;
 
     QTextStream out(&m_out);
+
+
     switch (static_cast<CNetworkManager::PacketType>(packet))
     {
     case CNetworkManager::Ehlo:
@@ -87,4 +88,25 @@ void CLoger::logPacket(QByteArray buffer)
     default:
         break;
     }
+}
+
+
+void CLoger::logInvalidPacket(QByteArray buffer)
+{
+    quint32 packet;
+    QDataStream in(&buffer, QIODevice::ReadOnly);
+    in.setVersion(QDataStream::Qt_4_6);
+
+    /*
+    QString sender;
+    if (!(in >> packet >> sender))
+    {
+        out << "Invalid Packet Received\r\n";
+    }
+    else
+    {
+        out << "Invalid Packet Received from " << sender;
+        out << "\r\n";
+    }
+    */
 }
