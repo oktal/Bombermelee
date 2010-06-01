@@ -103,7 +103,7 @@ void CClient::onError()
 
 void CClient::sendPing()
 {
-    m_networkManager->sendPingPacket();
+    //m_networkManager->sendPingPacket();
     m_pingTime.restart();
 }
 
@@ -120,26 +120,40 @@ void CClient::processReadyRead()
         m_buffer.append(c);
     } while (m_socket->bytesAvailable());
 
-    processData();
+    QList<QByteArray> packets = m_networkManager->getPacketsFromBuffer(m_buffer);
+
+    foreach(QByteArray packet, packets)
+    {
+        processData(packet);
+    }
 }
 
-void CClient::processData()
+void CClient::readData()
 {
-    quint32 packet;
+    QByteArray buffer;
+    quint32 packetSize;
+    QBuffer in;
+    in.setBuffer(&m_buffer);
+    in.open(QIODevice::ReadOnly);
+    do
+    {
+        QDataStream stream(m_buffer);
+        stream >> packetSize;
+        in.read(sizeof(quint32));
+        buffer = in.read(packetSize);
+        processData(buffer);
+        buffer.clear();
+    } while (in.bytesAvailable());
+}
+
+void CClient::processData(QByteArray buffer)
+{
+    quint32 size, packet;
     CNetworkManager networkManager(m_socket);
-    QDataStream in(&m_buffer, QIODevice::ReadOnly);
+    QDataStream in(&buffer, QIODevice::ReadOnly);
     in.setVersion(QDataStream::Qt_4_6);
 
-    quint32 blockSize;
-    in >> blockSize;
-
-    if (!blockSize ||
-        static_cast<quint32>(m_buffer.size()) != blockSize)
-    {
-        qDebug() << "Invalid packet received";
-        return;
-    }
-
+    in >> size;
     in >> packet;
 
     switch (static_cast<CNetworkManager::PacketType>(packet))
@@ -258,8 +272,10 @@ void CClient::processData()
     case CNetworkManager::Map:
         {
             QString map;
+            quint8 roundsNumber;
             in >> map;
-            m_gameBoard->setMap(map.toStdString());
+            in >> roundsNumber;
+            m_gameBoard->setMap(map.toStdString(), roundsNumber);
         }
         break;
     case CNetworkManager::Bomb:
@@ -319,6 +335,7 @@ void CClient::processData()
         }
         break;
     default:
+        qDebug() << "Invalid Packet Received";
         break;
     }
 }

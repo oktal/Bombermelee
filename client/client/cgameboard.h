@@ -43,7 +43,7 @@ public:
 
     void pongReceived();
 
-    void setMap(std::string map);
+    void setMap(const std::string &map, unsigned roundsNumber);
     void plantedBomb(const std::string &bomber, unsigned x, unsigned y,
                      CBomb::BombType type);
     void setConnected(bool connected);
@@ -51,8 +51,11 @@ public:
 
 private:
     /* private methods */
+    /* Overrided methods */
     void OnInit();
     void OnUpdate();
+
+
     void drawMap();
     void drawPlayers();
     void drawExplosions();
@@ -63,6 +66,8 @@ private:
     void plantBomb();
     void useSpecialBonus();
     CPlayer *getPlayerFromNick(const std::string &nick);
+    int lastPlayerAlive() const;
+    void playersRespawn();
 
     /* Images and Sprites */
     sf::Sprite m_wall;
@@ -84,6 +89,8 @@ private:
     unsigned m_warmupTime;
     float m_frameRate;
     unsigned m_pingTime;
+    unsigned m_roundsNumber;
+    unsigned m_currentRound;
     CMap m_map;
     Status m_status;
     sf::Clock m_fpsRefreshTime;

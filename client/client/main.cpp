@@ -24,6 +24,7 @@ This file is part of Bombermelee.
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
+    QApplication::setStyle(new QPlastiqueStyle);
     CConnect w;
     w.show();
     return a.exec();

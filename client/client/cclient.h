@@ -34,7 +34,8 @@ private:
     CNetworkManager *m_networkManager;
 
     void connectToServer();
-    void processData();
+    void readData();
+    void processData(QByteArray buffer);
     void appendToChatBox(const QString &text);
     void appendToUsersList(const QString &nick, const QString &color);
     bool eventFilter(QObject *obj, QEvent *ev);

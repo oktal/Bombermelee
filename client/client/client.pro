@@ -10,7 +10,6 @@ LIBS += -lsfml-audio-d \
     -lsfml-window-d \
     -lsfml-system-d \
     -lsfml-main
-
 win32:LIBS += -lws2_32
 DEFINES += SFML_DYNAMIC
 HEADERS += cconnect.h \

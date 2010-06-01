@@ -3,12 +3,18 @@
 #include "cplayer.h"
 #include <QByteArray>
 #include <QDataStream>
+#include <QBuffer>
 
 #include <winsock2.h>
+
 
 CNetworkManager::CNetworkManager(QTcpSocket *socket)
 {
    setSocket(socket);
+   m_endOfFrame.resize(3);
+   m_endOfFrame[0] = 0x00; /* NUL */
+   m_endOfFrame[1] = 0x0D; /* CR */
+   m_endOfFrame[2] = 0x0A; /* LF */
 }
 
 void CNetworkManager::setSocket(QTcpSocket *socket)
@@ -36,8 +42,10 @@ void CNetworkManager::sendEhloPacket()
 
     out << (quint32) 0;
     out << (quint32) Ehlo;
+
     out.device()->seek(0);
-    out << (quint32)(block.size());
+    out << (quint32)(block.size() - sizeof(quint32));
+    out << m_endOfFrame;
     sendData(block);
 
 }
@@ -53,8 +61,10 @@ void CNetworkManager::sendNickPacket(const QString &nick)
     out << (quint32) 0;
     out << (quint32) Nick;
     out << nick;
+
     out.device()->seek(0);
-    out << (quint32)(block.size());
+    out << (quint32)(block.size() - sizeof(quint32));
+    out << m_endOfFrame;
     sendData(block);
 }
 
@@ -72,8 +82,10 @@ void CNetworkManager::sendMovePacket(const std::string &nick, Direction directio
     out << (quint8) direction;
     out << x;
     out << y;
+
     out.device()->seek(0);
-    out << (quint32)(block.size());
+    out << (quint32)(block.size() - sizeof(quint32));
+    out << m_endOfFrame;
     sendData(block);
 }
 
@@ -94,6 +106,7 @@ void CNetworkManager::sendBombPacket(const std::string &nick, unsigned x, unsign
 
     out.device()->seek(0);
     out << (quint32)(block.size());
+    out << m_endOfFrame;
     sendData(block);
 }
 
@@ -112,7 +125,8 @@ void CNetworkManager::sendBoomPacket(const std::string &nick, unsigned x, unsign
     out << y;
 
     out.device()->seek(0);
-    out << (quint32)(block.size());
+    out << (quint32)(block.size() - sizeof(quint32));
+    out << m_endOfFrame;
     sendData(block);
 }
 
@@ -130,7 +144,8 @@ void CNetworkManager::sendBonusPacket(const std::string &nick, CBonus::BonusType
     out << (quint8) type;
 
     out.device()->seek(0);
-    out << (quint32)(block.size());
+    out << (quint32)(block.size() - sizeof(quint32));
+    out << m_endOfFrame;
     sendData(block);
 }
 
@@ -144,8 +159,10 @@ void CNetworkManager::sendUsersPacket()
 
     out << (quint32) 0;
     out << (quint32) Users;
+
     out.device()->seek(0);
-    out << (quint32)(block.size());
+    out << (quint32)(block.size() - sizeof(quint32));
+    out << m_endOfFrame;
     sendData(block);
 }
 
@@ -163,7 +180,8 @@ void CNetworkManager::sendSayPacket(const QString &nick, const QString &message)
     out << message;
 
     out.device()->seek(0);
-    out << (quint32)(block.size());
+    out << (quint32)(block.size() - sizeof(quint32));
+    out << m_endOfFrame;
     sendData(block);
 }
 
@@ -175,8 +193,10 @@ void CNetworkManager::sendPingPacket()
 
     out << (quint32) 0;
     out << (quint32) Ping;
+
     out.device()->seek(0);
-    out << (quint32)(block.size());
+    out << (quint32)(block.size() - sizeof(quint32));
+    out << m_endOfFrame;
     sendData(block);
 }
 
@@ -188,8 +208,10 @@ void CNetworkManager::sendPongPacket()
 
     out << (quint32) 0;
     out << (quint32) Pong;
+
     out.device()->seek(0);
-    out << (quint32)(block.size());
+    out << (quint32)(block.size() - sizeof(quint32));
+    out << m_endOfFrame;
     sendData(block);
 }
 
@@ -197,4 +219,42 @@ void CNetworkManager::sendData(QByteArray block)
 {
     m_socket->write(block);
     m_socket->waitForBytesWritten();
+}
+
+QList<QByteArray> CNetworkManager::getPacketsFromBuffer(QByteArray &buffer)
+{
+    QList<QByteArray> ret;
+    QByteArray packet;
+    QBuffer in;
+    in.setBuffer(&buffer);
+    in.open(QIODevice::ReadOnly);
+    do
+    {
+        QByteArray c = in.read(1);
+        if (c[0] == m_endOfFrame[0]) /* NUL */
+        {
+            QByteArray cr = in.read(1);
+            if (cr[0] != m_endOfFrame[1]) /* CR */
+            {
+                packet.clear();
+            }
+            else
+            {
+                QByteArray lf = in.read(1);
+                if (lf[0] != m_endOfFrame[2]) /* LF */
+                {
+                    packet.clear();
+                }
+                else
+                {
+                    ret.append(packet);
+                }
+            }
+        }
+        else
+        {
+            packet.append(c);
+        }
+    } while (in.bytesAvailable());
+    return ret;
 }

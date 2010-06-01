@@ -6,6 +6,7 @@
 #include <ctime>
 #include <cstdlib>
 
+
 /*
 This file is part of Bombermelee.
 
@@ -38,14 +39,19 @@ CServer::CServer(QWidget *parent) :
     m_btn_pause = new QPushButton("Pause Game");
     m_message = new QLineEdit();
     m_btn_send = new QPushButton("send");
+    m_spn_round = new QSpinBox();
+    m_spn_round->setMinimum(1);
+    m_spn_round->setMaximum(5);
+
+    QLabel *m_lbl_round = new QLabel("Number of rounds:");
 
     QWidget *mainWidget = new QWidget();
     QGridLayout *mainLayout = new QGridLayout();
     mainLayout->addWidget(m_console, 0, 0, 1, 0);
-    mainLayout->addWidget(m_btn_launch, 1, 0);
-    mainLayout->addWidget(m_btn_pause, 1, 1);
-    /*mainLayout->addWidget(m_message, 2, 0);
-    mainLayout->addWidget(m_btn_send, 2, 1);*/
+    mainLayout->addWidget(m_lbl_round, 1, 0);
+    mainLayout->addWidget(m_spn_round, 1, 1);
+    mainLayout->addWidget(m_btn_launch, 2, 0);
+    mainLayout->addWidget(m_btn_pause, 2, 1);
     mainWidget->setLayout(mainLayout);
 
     setCentralWidget(mainWidget);
@@ -143,38 +149,59 @@ void CServer::processReadyRead()
 {
     /* sender of the message */
     QTcpSocket *socket = qobject_cast<QTcpSocket *>(sender());
+
+    /*
     if (socket->bytesAvailable() < (int)sizeof(quint32))
     {
+        qDebug() << "Invalid Packet Received";
         return;
     }
+    */
     m_buffer.clear();
     do
     {
         QByteArray c = socket->read(1);
         m_buffer.append(c);
     } while (socket->bytesAvailable());
-    processData(socket);
+
+    CNetworkManager networkManager;
+    QList<QByteArray> packets = networkManager.getPacketsFromBuffer(m_buffer);
+
+    foreach(QByteArray packet, packets)
+    {
+        processData(socket, packet);
+    }
 }
 
-void CServer::processData(QTcpSocket *sender)
+void CServer::readData(QTcpSocket *sender)
 {
-    quint32 packet;
+    QByteArray buffer;
+    quint32 packetSize;
+    QBuffer in;
+    in.setBuffer(&m_buffer);
+    in.open(QIODevice::ReadOnly);
+    do
+    {
+        QDataStream stream(m_buffer);
+        stream >> packetSize;
+        in.read(sizeof(quint32));
+        buffer.append(in.read(packetSize));
+        processData(sender, buffer);
+        buffer.clear();
+    } while (in.bytesAvailable());
+
+}
+
+void CServer::processData(QTcpSocket *sender, QByteArray buffer)
+{
+    quint32 size, packet;
     CNetworkManager networkManager(sender);
-    QDataStream in(&m_buffer, QIODevice::ReadOnly);
+    QDataStream in(&buffer, QIODevice::ReadOnly);
     in.setVersion(QDataStream::Qt_4_6);
 
-    m_loger->logPacket(m_buffer);
+    m_loger->logPacket(buffer);
 
-    quint32 blockSize;
-    in >> blockSize;
-
-    if (!blockSize ||
-        static_cast<quint32>(m_buffer.size()) != blockSize)
-    {
-        qDebug() << "Invalid packet received";
-        return;
-    }
-
+    in >> size;
     in >> packet;
     QString s;
 
@@ -203,17 +230,14 @@ void CServer::processData(QTcpSocket *sender)
             m_colors.removeOne(color);
             networkManager.sendOkPacket(color);
             appendToConsole(tr("<strong>%1</strong> has joined").arg(nick));
-            m_clientsList.append(newClient);
 
             QList<CClient *>::iterator it;
             for (it = m_clientsList.begin(); it != m_clientsList.end(); ++it)
             {
                 CClient *client = *it;
-                if (client->getSocket() != sender)
-                {
-                    client->networkManager->sendJoinPacket(nick, color);
-                }
+                client->networkManager->sendJoinPacket(nick, color);
             }
+            m_clientsList.append(newClient);
 
         }
         break;
@@ -236,8 +260,10 @@ void CServer::processData(QTcpSocket *sender)
         broadcast(m_buffer);
         break;
     case CNetworkManager::Move:
+        /*
         in >> s;
         qDebug() << "Received Move Packet from " << s;
+        */
         broadcast(m_buffer);
         break;
     case CNetworkManager::Bomb:
@@ -259,6 +285,7 @@ void CServer::processData(QTcpSocket *sender)
     case CNetworkManager::Undefined:
         break;
     default:
+        qDebug() << "Invalid Packet Received";
         break;
     }
 }
@@ -307,7 +334,7 @@ void CServer::sendMapToClients()
     for (it = m_clientsList.begin(); it != m_clientsList.end(); ++it)
     {
         CClient *client = *it;
-        client->networkManager->sendMapPacket(map.getMap());
+        client->networkManager->sendMapPacket(map.getMap(), m_spn_round->value());
     }
 }
 

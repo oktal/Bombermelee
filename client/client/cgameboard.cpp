@@ -47,6 +47,8 @@ CGameBoard::CGameBoard(QWidget *parent, const QPoint &position, const QSize &siz
     m_warmupTime = 0;
     m_frameRate = 0.0f;
     m_pingTime = 0;
+    m_roundsNumber = 0;
+    m_currentRound = 0;
     m_status = Waiting_Players;
     m_bonusCanvas = NULL;
     m_networkManager = new CNetworkManager();
@@ -410,7 +412,7 @@ void CGameBoard::drawMap()
         }
         else
         {
-            /* Let's check if the camp has been kicked (bomb kick) */
+            /* Let's check if the bomb has been kicked (bomb kick) */
             if (bomb->getDirection() != CBomb::Fixed)
             {
                 switch (bomb->getCollision(bomb->getDirection(), m_map))
@@ -597,13 +599,18 @@ void CGameBoard::drawPlayers()
         score.SetStyle(sf::String::Bold);
         Draw(score);
         recty += 20;
-
     }
+    sf::String txtRounds(QString("Round %1/%2").arg(m_currentRound).arg(m_roundsNumber)
+                         .toStdString());
+    txtRounds.SetPosition(540, 200);
+    txtRounds.SetColor(sf::Color::Black);
+    txtRounds.SetStyle(sf::String::Bold);
+    txtRounds.SetSize(15.0f);
+    Draw(txtRounds);
 }
 
 void CGameBoard::drawExplosions()
 {
-    CPlayer *me = m_playersList[0];
     QList<CExplosion *>::iterator it;
     for (it = m_explosionsList.begin(); it != m_explosionsList.end(); ++it)
     {
@@ -619,7 +626,8 @@ void CGameBoard::drawExplosions()
         {
             unsigned x = particles[j]->getX();
             unsigned y = particles[j]->getY();
-            if (m_map.getBlock(x, y) == Box)
+            if (m_map.getBlock(x, y) == Box ||
+                m_map.getBlock(x, y) == Bonus)
             {
                 m_map.setBlock(x, y, Floor);
             }
@@ -629,13 +637,27 @@ void CGameBoard::drawExplosions()
             }
             Draw(*particles[j]);
             particles[j]->anim(GetFrameTime());
-            if (collision(*particles[j], *me))
+            for (unsigned i = 0; i < m_playersList.size(); ++i)
             {
-                me->explode();
-                me->setDirection(Stopped);
-                if (me->IsPaused())
+                CPlayer *player = m_playersList[i];
+                if (collision(*particles[j], *player))
                 {
-                    me->Play();
+                    if (player->IsPaused())
+                    {
+                        player->Play();
+                    }
+                    player->explode();
+                    player->setDirection(Stopped);
+
+                    // int lastPlayer = lastPlayerAlive(); /* Get the ID of the last player alive */
+                    //if (lastPlayer >= 0) /* Just one player still alive, he wins */
+                    //{
+                        /*
+                        CPlayer *winner = m_playersList[lastPlayer];
+                        winner->score++;
+                        playersRespawn();
+                        */
+                    //}
                 }
             }
         }
@@ -644,7 +666,7 @@ void CGameBoard::drawExplosions()
 
 void CGameBoard::drawFPS()
 {
-    sf::Shape rect = sf::Shape::Rectangle(520, 20, 620, 40, sf::Color::Black, 1.0f, sf::Color::Black);
+    sf::Shape rect = sf::Shape::Rectangle(520, 20, 620, 40, sf::Color::Black, 1.0f, sf::Color::White);
     Draw(rect);
     sf::String FPS(QString("%1 FPS").arg(static_cast<unsigned>(m_frameRate)).toStdString());
     FPS.SetPosition(525, 25);
@@ -786,26 +808,9 @@ void CGameBoard::drawBonusCanvas()
                 CBonus *lastBonus = me->getBonusList().back();
                 if (lastBonus != NULL && dynamic_cast<CLimitedBonus *>(lastBonus))
                 {
-                    CLimitedBonus *bonus = dynamic_cast<CLimitedBonus *>(lastBonus);
-
-                    /* Footer : remaining time */
-                    sf::Shape footer = sf::Shape::Rectangle(
-                     m_bonusCanvas->getCanvasPosition().Left, m_bonusCanvas->getCanvasPosition().Bottom,
-                     m_bonusCanvas->getCanvasPosition().Right, m_bonusCanvas->getCanvasPosition().Bottom + 20,
-                     sf::Color(127, 127, 127), 1.0f, sf::Color(0, 0, 0));
-                    Draw(footer);
+                    CLimitedBonus *bonus = static_cast<CLimitedBonus *>(lastBonus);
 
                     unsigned remainingTime = static_cast<unsigned>(bonus->getRemainingTime());
-                    QString time = QString("%1s left").arg(remainingTime);
-
-                    /* Remaining time */
-                    sf::String timeLeft;
-                    timeLeft.SetText(time.toStdString());
-                    timeLeft.SetStyle(sf::String::Italic);
-                    timeLeft.SetPosition(m_bonusCanvas->getCanvasPosition().Left + 15,
-                                     m_bonusCanvas->getCanvasPosition().Bottom + 2);
-                    timeLeft.SetSize(13.0f);
-                    Draw(timeLeft);
                     if (remainingTime == 0)
                     {
                         delete m_bonusCanvas;
@@ -959,11 +964,13 @@ void CGameBoard::setPingTime(unsigned pingTime)
 /**
   Call the setMap method to construct the map from a string
 */
-void CGameBoard::setMap(std::string map)
+void CGameBoard::setMap(const std::string &map, unsigned roundsNumber)
 {
     /* Map is received, we can begin the game */
     warmupTimer = new QTimer(this);
     m_gameBegin = false;
+    m_roundsNumber = roundsNumber;
+    m_currentRound = 1;
     warmupTimer->setInterval(1000);
     warmupTimer->start();
     QObject::connect(warmupTimer, SIGNAL(timeout()), this, SLOT(checkWarmupTime()));
@@ -972,10 +979,7 @@ void CGameBoard::setMap(std::string map)
     m_warmupTime = 0;
 
     m_map.setMap(map);
-    for (int i = 0; i < m_playersList.size(); ++i)
-    {
-        m_playersList[i]->setCorrectPosition();
-    }
+    playersRespawn();
 }
 
 void CGameBoard::checkWarmupTime()
@@ -1057,6 +1061,38 @@ void CGameBoard::playerGotBonus(const std::string &nick, CBonus::BonusType type)
     else
     {
         player->addBonus(new CBonus(type));
+    }
+}
+
+int  CGameBoard::lastPlayerAlive() const
+{
+    int ret = -1;
+    for (int i = 0; i < m_playersList.size(); ++i)
+    {
+        CPlayer const *p = m_playersList[i];
+        if (!p->isDead())
+        {
+            if (ret != -1)
+            {
+                ret = -1;
+                break;
+            }
+            else
+            {
+                ret = i;
+            }
+        }
+    }
+    return ret;
+}
+
+void CGameBoard::playersRespawn()
+{
+    QList<CPlayer *>::const_iterator it;
+    for (it = m_playersList.begin(); it != m_playersList.end(); ++it)
+    {
+        CPlayer *player = *it;
+        player->setCorrectPosition();
     }
 }
 
