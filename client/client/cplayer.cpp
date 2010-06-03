@@ -495,7 +495,7 @@ std::list<CBonus *> CPlayer::getBonusList() const
     return m_bonusList;
 }
 
-void CPlayer::updateBonusTime(const float &elapsedTime)
+void CPlayer::checkBonusTime()
 {
     std::list<CBonus *>::iterator it = m_bonusList.begin();
     while (it != m_bonusList.end())
@@ -505,7 +505,6 @@ void CPlayer::updateBonusTime(const float &elapsedTime)
         {
             CLimitedBonus *bonus = static_cast<CLimitedBonus *>(*it);
             /* update the bonus */
-            bonus->updateTime(elapsedTime);
             if (bonus->isFinished())
             {
                 switch (bonus->getType())

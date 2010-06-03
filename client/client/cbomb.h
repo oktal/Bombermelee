@@ -45,7 +45,7 @@ private:
     unsigned m_y;
     BombType m_type;
     std::string m_bomber;
-    float m_elapsedTime;
+    sf::Clock m_clock;
     float m_explodeTime;
     Direction m_direction;
     unsigned m_speed;

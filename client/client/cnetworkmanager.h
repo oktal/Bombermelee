@@ -52,7 +52,7 @@ public:
     void sendSayPacket(const QString &nick, const QString &message);
     void sendPingPacket();
     void sendPongPacket();
-    QList<QByteArray> getPacketsFromBuffer(QByteArray &buffer);
+    static QList<QByteArray> getPacketsFromBuffer(QByteArray &buffer);
 
 private:
     void sendData(QByteArray block);

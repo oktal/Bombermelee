@@ -9,7 +9,6 @@ CBomb::CBomb(unsigned x, unsigned y, BombType type, const std::string &bomber)
     m_type = type;
     m_bomber = bomber;
     m_explodeTime = (m_type == Normal ? ExplodeTime : RemoteExplodeTime);
-    m_elapsedTime = 0.f;
     m_direction = Fixed;
     m_speed = 120;
     CImageManager *imageManager = CImageManager::GetInstance();
@@ -45,14 +44,9 @@ std::string CBomb::getBomber() const
     return m_bomber;
 }
 
-void CBomb::updateTime(const float &elapsedTime)
-{
-    m_elapsedTime += elapsedTime;
-}
-
 bool CBomb::explode() const
 {
-    return m_elapsedTime >= m_explodeTime;
+    return m_clock.GetElapsedTime() >= m_explodeTime;
 }
 
 void CBomb::setDirection(Direction direction)

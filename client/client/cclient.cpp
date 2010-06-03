@@ -103,7 +103,7 @@ void CClient::onError()
 
 void CClient::sendPing()
 {
-    //m_networkManager->sendPingPacket();
+    m_networkManager->sendPingPacket();
     m_pingTime.restart();
 }
 
@@ -120,7 +120,7 @@ void CClient::processReadyRead()
         m_buffer.append(c);
     } while (m_socket->bytesAvailable());
 
-    QList<QByteArray> packets = m_networkManager->getPacketsFromBuffer(m_buffer);
+    QList<QByteArray> packets = CNetworkManager::getPacketsFromBuffer(m_buffer);
 
     foreach(QByteArray packet, packets)
     {

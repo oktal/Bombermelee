@@ -392,8 +392,6 @@ void CGameBoard::drawMap()
         CBomb *bomb = *it;
         unsigned x = bomb->getX();
         unsigned y = bomb->getY();
-        /* Update the time */
-        bomb->updateTime(GetFrameTime());
         /* It the bomb must explode */
         if (bomb->explode())
         {
@@ -462,7 +460,7 @@ void CGameBoard::drawPlayers()
     for (int i = 0; i < m_playersList.size(); ++i)
     {
         CPlayer *player = m_playersList[i];
-        player->updateBonusTime(GetFrameTime());
+        player->checkBonusTime();
 
         if (player->getDirection() != Stopped)
         {
@@ -626,8 +624,7 @@ void CGameBoard::drawExplosions()
         {
             unsigned x = particles[j]->getX();
             unsigned y = particles[j]->getY();
-            if (m_map.getBlock(x, y) == Box ||
-                m_map.getBlock(x, y) == Bonus)
+            if (m_map.getBlock(x, y) == Box)
             {
                 m_map.setBlock(x, y, Floor);
             }
@@ -980,6 +977,9 @@ void CGameBoard::setMap(const std::string &map, unsigned roundsNumber)
 
     m_map.setMap(map);
     playersRespawn();
+
+    QSound::play("../Soundtrack.wav");
+
 }
 
 void CGameBoard::checkWarmupTime()

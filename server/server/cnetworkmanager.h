@@ -44,7 +44,7 @@ public:
     void sendMapPacket(const std::string &map, int roundsNomber);
     void sendPingPacket();
     void sendPongPacket();
-    QList<QByteArray> getPacketsFromBuffer(QByteArray &buffer);
+    static QList<QByteArray> getPacketsFromBuffer(QByteArray &buffer);
 
 private:
     void sendData(QByteArray block);
