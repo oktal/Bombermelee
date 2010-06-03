@@ -164,8 +164,7 @@ void CServer::processReadyRead()
         m_buffer.append(c);
     } while (socket->bytesAvailable());
 
-    CNetworkManager networkManager;
-    QList<QByteArray> packets = networkManager.getPacketsFromBuffer(m_buffer);
+    QList<QByteArray> packets = CNetworkManager::getPacketsFromBuffer(m_buffer);
 
     foreach(QByteArray packet, packets)
     {

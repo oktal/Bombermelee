@@ -39,6 +39,7 @@ void CLoger::logPacket(QByteArray buffer)
     QString sender, nick;
     float f_x, f_y;
     unsigned u_x, u_y;
+    in >> blockSize;
     in >> packet;
 
     QTextStream out(&m_out);

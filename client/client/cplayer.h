@@ -88,7 +88,7 @@ public:
     void removeBonus(CBonus::BonusType type);
     CBonus *getBonus(CBonus::BonusType type);
     std::list<CBonus *> getBonusList() const;
-    void updateBonusTime(const float &elapsedTime);
+    void checkBonusTime();
 
     /* Public attributes */
     unsigned maxBombs;

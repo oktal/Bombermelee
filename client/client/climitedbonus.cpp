@@ -4,25 +4,14 @@ CLimitedBonus::CLimitedBonus(BonusType type, float time) :
         CBonus(type)
 {
     m_time = time;
-    m_elapsedTime = 0.0f;
-    m_finished = false;
 }
 
 bool CLimitedBonus::isFinished() const
 {
-    return m_finished;
-}
-
-void CLimitedBonus::updateTime(const float &elapsedTime)
-{
-    m_elapsedTime += elapsedTime;
-    if (m_elapsedTime >= m_time)
-    {
-        m_finished = true;
-    }
+    return m_clock.GetElapsedTime() >= m_time;
 }
 
 float CLimitedBonus::getRemainingTime() const
 {
-    return m_time - m_elapsedTime;
+    return m_time - m_clock.GetElapsedTime();
 }
