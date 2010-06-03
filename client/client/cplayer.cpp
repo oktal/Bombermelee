@@ -7,6 +7,7 @@
 #include <iostream>
 #include <typeinfo>
 #include <algorithm>
+#include "constants.h"
 
 /*
 This file is part of Bombermelee.
@@ -173,7 +174,7 @@ void CPlayer::setStopTime(const float &stopTime)
 void CPlayer::setColor(const std::string &color)
 {
     m_color = color;
-    std::string fileName = "../character-sheet-" + m_color + ".png";
+    std::string fileName = "datas/images/character-sheet-" + m_color + ".png";
     if (!m_img_player.LoadFromFile(fileName))
     {
         return;
@@ -223,7 +224,7 @@ BlockType CPlayer::getCollision(Direction direction, CMap &map)
             }
             if (map.getBlock(x, y) == Bonus)
             {
-                tmp.SetImage(*imageManager->GetImage("../bonus.png"));
+                tmp.SetImage(*imageManager->GetImage(IMG_BONUS));
                 tmp.SetPosition((x * BLOCK_SIZE) + 5, ((y) * BLOCK_SIZE) + 5);
                 block = Bonus;
             }
@@ -231,13 +232,13 @@ BlockType CPlayer::getCollision(Direction direction, CMap &map)
                 map.getBlock(x, y - 1) == Box ||
                 map.getBlock(x, y - 1) == BonusBox)
             {
-                tmp.SetImage(*imageManager->GetImage("../mur.png"));
+                tmp.SetImage(*imageManager->GetImage(IMG_WALL));
                 tmp.SetPosition(x * BLOCK_SIZE, (y - 1) * BLOCK_SIZE);
                 block = map.getBlock(x, y - 1);
             }
             else if (map.getBlock(x, y - 1) == Bomb)
             {
-                 tmp.SetImage(*imageManager->GetImage("../bomb.png"));
+                 tmp.SetImage(*imageManager->GetImage(IMG_BOMB_NORMAL));
                  tmp.SetPosition((x * BLOCK_SIZE) + 6, ((y - 1) * BLOCK_SIZE) + 6);
                  block = Bomb;
             }
@@ -250,7 +251,7 @@ BlockType CPlayer::getCollision(Direction direction, CMap &map)
             }
             if (map.getBlock(x, y) == Bonus)
             {
-                tmp.SetImage(*imageManager->GetImage("../bonus.png"));
+                tmp.SetImage(*imageManager->GetImage(IMG_BONUS));
                 tmp.SetPosition((x * BLOCK_SIZE) + 5, ((y) * BLOCK_SIZE) + 5);
                 block = Bonus;
             }
@@ -258,13 +259,13 @@ BlockType CPlayer::getCollision(Direction direction, CMap &map)
                 map.getBlock(x, y + 1) == Box ||
                 map.getBlock(x, y + 1) == BonusBox)
             {
-                tmp.SetImage(*imageManager->GetImage("../mur.png"));
+                tmp.SetImage(*imageManager->GetImage(IMG_WALL));
                 tmp.SetPosition(x * BLOCK_SIZE, (y + 1) * BLOCK_SIZE);
                 block = map.getBlock(x, y + 1);
             }
             else if (map.getBlock(x, y + 1) == Bomb)
             {
-                tmp.SetImage(*imageManager->GetImage("../bomb.png"));
+                tmp.SetImage(*imageManager->GetImage(IMG_BOMB_NORMAL));
                 tmp.SetPosition((x * BLOCK_SIZE) + 6, ((y + 1) * BLOCK_SIZE) + 6);
                 block = Bomb;
             }
@@ -276,7 +277,7 @@ BlockType CPlayer::getCollision(Direction direction, CMap &map)
             }
             if (map.getBlock(x, y) == Bonus)
             {
-                tmp.SetImage(*imageManager->GetImage("../bonus.png"));
+                tmp.SetImage(*imageManager->GetImage(IMG_BONUS));
                 tmp.SetPosition((x * BLOCK_SIZE) + 5, ((y) * BLOCK_SIZE) + 5);
                 block = Bonus;
             }
@@ -284,13 +285,13 @@ BlockType CPlayer::getCollision(Direction direction, CMap &map)
                 map.getBlock(x - 1, y) == Box ||
                 map.getBlock(x - 1, y) == BonusBox)
             {
-                tmp.SetImage(*imageManager->GetImage("../mur.png"));
+                tmp.SetImage(*imageManager->GetImage(IMG_WALL));
                 tmp.SetPosition((x - 1) * BLOCK_SIZE, y * BLOCK_SIZE);
                 block = map.getBlock(x - 1, y);
             }
             else if (map.getBlock(x - 1, y) == Bomb)
             {
-                tmp.SetImage(*imageManager->GetImage("../bomb.png"));
+                tmp.SetImage(*imageManager->GetImage(IMG_BOMB_NORMAL));
                 tmp.SetPosition(((x - 1) * BLOCK_SIZE) + 6, (y * BLOCK_SIZE) + 6);
                 block = Bomb;
             }
@@ -303,7 +304,7 @@ BlockType CPlayer::getCollision(Direction direction, CMap &map)
             }
             if (map.getBlock(x, y) == Bonus)
             {
-                tmp.SetImage(*imageManager->GetImage("../bonus.png"));
+                tmp.SetImage(*imageManager->GetImage(IMG_BONUS));
                 tmp.SetPosition((x * BLOCK_SIZE) + 5, ((y) * BLOCK_SIZE) + 5);
                 block = Bonus;
             }
@@ -311,13 +312,13 @@ BlockType CPlayer::getCollision(Direction direction, CMap &map)
                 map.getBlock(x + 1, y) == Box ||
                 map.getBlock(x + 1, y) == BonusBox)
             {
-                tmp.SetImage(*imageManager->GetImage("../mur.png"));
+                tmp.SetImage(*imageManager->GetImage(IMG_WALL));
                 tmp.SetPosition((x + 1) * BLOCK_SIZE, y * BLOCK_SIZE);
                 block = map.getBlock(x + 1, y);
             }
             else if (map.getBlock(x + 1, y) == Bomb)
             {
-                tmp.SetImage(*imageManager->GetImage("../bomb.png"));
+                tmp.SetImage(*imageManager->GetImage(IMG_BOMB_NORMAL));
                 tmp.SetPosition(((x + 1) * BLOCK_SIZE) + 6, (y * BLOCK_SIZE) + 6);
                 block = Bomb;
             }

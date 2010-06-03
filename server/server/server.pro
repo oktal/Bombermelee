@@ -2,9 +2,8 @@
 # Project created by QtCreator 2010-03-31T11:27:25
 # -------------------------------------------------
 QT += network
-CONFIG += debug \
-    qt \
-    console
+OBJECTS_DIR = obj
+MOC_DIR = obj
 TARGET = server
 TEMPLATE = app
 CONFIG += release

@@ -1,6 +1,7 @@
 #include "cbomb.h"
 #include "cmap.h"
 #include "cimagemanager.h"
+#include "constants.h"
 
 CBomb::CBomb(unsigned x, unsigned y, BombType type, const std::string &bomber)
 {
@@ -15,10 +16,10 @@ CBomb::CBomb(unsigned x, unsigned y, BombType type, const std::string &bomber)
     switch (m_type)
     {
     case Normal:
-        SetImage(*imageManager->GetImage("../bomb.png"));
+        SetImage(*imageManager->GetImage(IMG_BOMB_NORMAL));
         break;
     case Remote:
-        SetImage(*imageManager->GetImage("../remote_bomb.png"));
+        SetImage(*imageManager->GetImage(IMG_BOMB_REMOTE));
         break;
     }
     SetPosition((BLOCK_SIZE * x) + 6, (BLOCK_SIZE * y) + 6);
@@ -75,6 +76,9 @@ BlockType CBomb::getCollision(Direction direction, CMap &map) const
         break;
     case Down:
         ret = (m_y + 1 >= MAP_HEIGHT ? Wall : map.getBlock(m_x, m_y + 1));
+        break;
+    case Fixed:
+        break;
     }
     return ret;
 }
