@@ -348,7 +348,7 @@ void CClient::appendToChatBox(const QString &text)
 void CClient::appendToUsersList(const QString &nick, const QString &color)
 {
     QListWidgetItem *item = new QListWidgetItem(nick);
-    QString iconFileName = QString("../bullet-%1.png").arg(color);
+    QString iconFileName = QString("datas/images/bullet-%1.png").arg(color);
     item->setIcon(QIcon(iconFileName));
     m_lst_users->addItem(item);
 }

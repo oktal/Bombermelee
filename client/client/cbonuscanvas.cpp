@@ -1,7 +1,7 @@
 #include "cbonuscanvas.h"
 #include "cimagemanager.h"
+#include "constants.h"
 #include <algorithm>
-#include <ctime>
 #include <QPair>
 #include <QtDebug>
 
@@ -42,34 +42,34 @@ void CBonusCanvas::setBonusImage()
     switch (m_bonusList.keys()[m_currentBonus]->getType())
     {
     case CBonus::BombDown:
-        SetImage(*imageManager->GetImage("../bomb_down70.png"));
+        SetImage(*imageManager->GetImage(IMG_BONUS_BOMBDOWN));
         break;
     case CBonus::BombUp:
-        SetImage(*imageManager->GetImage("../bomb_up70.png"));
+        SetImage(*imageManager->GetImage(IMG_BONUS_BOMBUP));
         break;
     case CBonus::SpeedDown:
-        SetImage(*imageManager->GetImage("../speed_down70.png"));
+        SetImage(*imageManager->GetImage(IMG_BONUS_SPEEDDOWN));
         break;
     case CBonus::SpeedUp:
-        SetImage(*imageManager->GetImage("../speed_up70.png"));
+        SetImage(*imageManager->GetImage(IMG_BONUS_SPEEDUP));
         break;
     case CBonus::FireDown:
-        SetImage(*imageManager->GetImage("../fire_down70.png"));
+        SetImage(*imageManager->GetImage(IMG_BONUS_FIREDOWN));
         break;
     case CBonus::FireUp:
-        SetImage(*imageManager->GetImage("../fire_up70.png"));
+        SetImage(*imageManager->GetImage(IMG_BONUS_FIREUP));
         break;
     case CBonus::FullFire:
-        SetImage(*imageManager->GetImage("../full_fire70.png"));
+        SetImage(*imageManager->GetImage(IMG_BONUS_FULLFIRE));
         break;
     case CBonus::RemoteMine:
-        SetImage(*imageManager->GetImage("../remote_mine70.png"));
+        SetImage(*imageManager->GetImage(IMG_BONUS_REMOTEMINE));
         break;
     case CBonus::BombPass:
-        SetImage(*imageManager->GetImage("../bomb_pass70.png"));
+        SetImage(*imageManager->GetImage(IMG_BONUS_BOMBPASS));
         break;
     case CBonus::BombKick:
-        SetImage(*imageManager->GetImage("../bomb_kick70.png"));
+        SetImage(*imageManager->GetImage(IMG_BONUS_BOMBKICK));
         break;
     }
 }

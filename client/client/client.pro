@@ -1,14 +1,19 @@
-CONFIG += debug \
-    qt \
-    console
-INCLUDEPATH += C:\Qt\2010.02.1\mingw\include \
+CONFIG += release
+OBJECTS_DIR = obj
+MOC_DIR = obj
+win32:INCLUDEPATH += C:\Qt\2010.02.1\mingw\include \
     LIBPATH \
     = \
     -L"C:\Qt\2010.02.1\mingw\lib"
-LIBS += -lsfml-audio-d \
+debug:LIBS += -lsfml-audio-d \
     -lsfml-graphics-d \
     -lsfml-window-d \
     -lsfml-system-d \
+    -lsfml-main
+release:LIBS += -lsfml-audio \
+    -lsfml-graphics \
+    -lsfml-window \
+    -lsfml-system \
     -lsfml-main
 win32:LIBS += -lws2_32
 DEFINES += SFML_DYNAMIC
@@ -28,7 +33,8 @@ HEADERS += cconnect.h \
     cbonuscanvas.h \
     climitedbonus.h \
     cbomb.h \
-    cnetworkmanager.h
+    cnetworkmanager.h \
+    constants.h
 SOURCES += cconnect.cpp \
     main.cpp \
     QSFMLCanvas.cpp \

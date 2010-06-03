@@ -4,6 +4,7 @@
 #include "cimagemanager.h"
 #include "cbonus.h"
 #include "climitedbonus.h"
+#include "constants.h"
 #include <QtGui>
 #include <QtMultimedia>
 #include <QVector>
@@ -26,15 +27,6 @@ This file is part of Bombermelee.
     along with Bombermelee.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-/**
-  * function _m transforms a message into a valid message request (ending by \r\n)
-  * @return message request
-*/
-static inline char const *_m(const std::string &message)
-{
-    return std::string(message + "\r\n").c_str();
-}
-
 CGameBoard::CGameBoard(QWidget *parent, const QPoint &position, const QSize &size, unsigned int FrameTime) :
         QSFMLCanvas(parent, position, size, FrameTime)
 {
@@ -52,17 +44,6 @@ CGameBoard::CGameBoard(QWidget *parent, const QPoint &position, const QSize &siz
     m_status = Waiting_Players;
     m_bonusCanvas = NULL;
     m_networkManager = new CNetworkManager();
-
-    /* TEST */
-    m_map.setBlock(2, 0, Bonus);
-    m_map.setBlock(4, 0, Bonus);
-    m_map.setBlock(5, 2, Bonus);
-    m_map.setBlock(2, 14, Bonus);
-    m_map.setBlock(4, 14, Bonus);
-    m_map.setBlock(5, 12, Bonus);
-    m_map.setBlock(12, 0, Bonus);
-    m_map.setBlock(10, 0, Bonus);
-    m_map.setBlock(9, 2, Bonus);
     SetFramerateLimit(60);
 }
 
@@ -88,25 +69,23 @@ CGameBoard::~CGameBoard()
 void CGameBoard::OnInit()
 {
     CImageManager *imageManager = CImageManager::GetInstance();
-    m_wall.SetImage(*imageManager->GetImage("../mur.png"));
-    m_box.SetImage(*imageManager->GetImage("../box.png"));
-    m_bonus.SetImage(*imageManager->GetImage("../bonus.png"));
-    m_explosion = *imageManager->GetImage("../explosion.png");
+    m_wall.SetImage(*imageManager->GetImage(IMG_WALL));
+    m_box.SetImage(*imageManager->GetImage(IMG_BOX));
+    m_bonus.SetImage(*imageManager->GetImage(IMG_BONUS));
+    m_explosion = *imageManager->GetImage(IMG_EXPLOSION);
 
-    imageManager->GetImage("../bomb.png");
-    imageManager->GetImage("../remote_bomb.png");
-    imageManager->GetImage("../speed_up70.png");
-    imageManager->GetImage("../speed_down70.png");
-    imageManager->GetImage("../fire_up70.png");
-    imageManager->GetImage("../fire_down70.png");
-    imageManager->GetImage("../bomb_up70.png");
-    imageManager->GetImage("../bomb_down70.png");
-    imageManager->GetImage("../remote_mine70.png");
-    imageManager->GetImage("../bomb_pass70.png");
-    imageManager->GetImage("../bomb_kick70.png");
-    imageManager->GetImage("../full_fire70.png");
-    imageManager->GetImage("../remote_bomb.png");
-    imageManager->GetImage("../explosion.png");
+    imageManager->GetImage(IMG_BOMB_NORMAL);
+    imageManager->GetImage(IMG_BOMB_REMOTE);
+    imageManager->GetImage(IMG_BONUS_SPEEDUP);
+    imageManager->GetImage(IMG_BONUS_SPEEDDOWN);
+    imageManager->GetImage(IMG_BONUS_FIREUP);
+    imageManager->GetImage(IMG_BONUS_FIREDOWN);
+    imageManager->GetImage(IMG_BONUS_BOMBUP);
+    imageManager->GetImage(IMG_BONUS_BOMBDOWN);
+    imageManager->GetImage(IMG_BONUS_REMOTEMINE);
+    imageManager->GetImage(IMG_BONUS_BOMBPASS);
+    imageManager->GetImage(IMG_BONUS_BOMBKICK);
+    imageManager->GetImage(IMG_BONUS_FULLFIRE);
 }
 
 /**
@@ -397,7 +376,7 @@ void CGameBoard::drawMap()
         {
             CPlayer *me = m_playersList[0];
             CPlayer *player = getPlayerFromNick(bomb->getBomber());
-            QSound::play("../explosion.wav");
+            QSound::play(SND_EXPLOSION);
             m_explosionsList.push_back(new CExplosion(x, y, player->bombRange, m_map,
                                                       bomb->getBomber(), m_explosion));
             if (bomb->getBomber() == me->getNick()) /* If I am the bomber */
@@ -483,21 +462,19 @@ void CGameBoard::drawPlayers()
                     {
                         m_bonusCanvas = new CBonusCanvas(0.05f, 1.0f, sf::Rect<int>(535, 320,605, 390));
                         m_map.setBlock(x, y, Floor);
-                        QSound::play("../bonus.wav");
                     }
                     else
                     {
                         m_bonusCanvas->Reset();
                         m_bonusCanvas->Play();
                         m_map.setBlock(x, y, Floor);
-                        QSound::play("../bonus.wav");
                     }
                 }
                 else
                 {
-                    QSound::play("../bonus.wav");
                     m_map.setBlock(x, y, Floor);
                 }
+                QSound::play(SND_BONUS);
                 break;
             case Bomb:
                 if (player->getBonus(CBonus::BombPass) != NULL)
@@ -507,7 +484,7 @@ void CGameBoard::drawPlayers()
                 else if (player->getBonus(CBonus::BombKick) != NULL)
                 {
                     unsigned _x = 0, _y = 0;
-                    CBomb::Direction direction;
+                    CBomb::Direction direction = CBomb::Fixed;
                     switch (player->getDirection())
                     {
                     case Right:
@@ -634,7 +611,7 @@ void CGameBoard::drawExplosions()
             }
             Draw(*particles[j]);
             particles[j]->anim(GetFrameTime());
-            for (unsigned i = 0; i < m_playersList.size(); ++i)
+            for (int i = 0; i < m_playersList.size(); ++i)
             {
                 CPlayer *player = m_playersList[i];
                 if (collision(*particles[j], *player))
@@ -868,7 +845,7 @@ void CGameBoard::plantBomb()
         m_networkManager->sendBombPacket(me->getNick(), x, y, CBomb::Normal);
     }
     me->pausedBombs++;
-    QSound::play("../plant.wav");
+    QSound::play(SND_PLANT);
 }
 
 void CGameBoard::useSpecialBonus()
@@ -896,7 +873,7 @@ void CGameBoard::useSpecialBonus()
         }
         if (usedBonus)
         {
-            QSound::play("../explosion.wav");
+            QSound::play(SND_EXPLOSION);
             QString pos = QString("%1 %2").arg(x).arg(y);
             m_explosionsList.push_back(new CExplosion(x, y, me->bombRange, m_map,
                                                       me->getNick(), m_explosion));
@@ -913,7 +890,7 @@ void CGameBoard::plantedBomb(const std::string &bomber, unsigned x, unsigned y,
 {
     m_map.setBlock(x, y, Bomb);
     m_bombsList.append(new CBomb(x, y, type, bomber));
-    QSound::play("../plant.wav");
+    QSound::play(SND_PLANT);
 }
 
 void CGameBoard::remoteExplode(const std::string &bomber, unsigned x, unsigned y)
@@ -932,7 +909,7 @@ void CGameBoard::remoteExplode(const std::string &bomber, unsigned x, unsigned y
             break;
         }
     }
-    QSound::play("../explosion.wav");
+    QSound::play(SND_EXPLOSION);
     m_explosionsList.push_back(new CExplosion(x, y, player->bombRange, m_map,
                                                   bomber, m_explosion));
 }
@@ -977,8 +954,6 @@ void CGameBoard::setMap(const std::string &map, unsigned roundsNumber)
 
     m_map.setMap(map);
     playersRespawn();
-
-    QSound::play("../Soundtrack.wav");
 
 }
 

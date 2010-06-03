@@ -153,7 +153,7 @@ void Animated::anim(float ElapsedTime)
             myElapsedTime = myTime;
 
             // On passe a la frame suivante
-            if (myCurrentFrame + 1 < myAnim->Size())
+            if (static_cast<unsigned>(myCurrentFrame + 1) < myAnim->Size())
                 myCurrentFrame++;
             else
             {
